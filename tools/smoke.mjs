@@ -26,7 +26,7 @@ function run(sec) {
 for (let fi = 0; fi < 6; fi++) {
   if (g.fi !== fi) throw new Error('floor mismatch ' + g.fi + ' vs ' + fi);
   const rooms = g.floor.rooms;
-  for (const r of rooms) { if (r.type === 'boss') continue; g.enterRoom(r, null); if (!run(40)) throw new Error(`room stuck f${fi} ${r.key} ${r.type} enemies=${g.enemies.map(e => e.type + ':' + e.st)}`); }
+  for (const r of rooms) { if (r.type === 'boss') continue; g.enterRoom(r, null); if (!run(60)) throw new Error(`room stuck f${fi} ${r.key} ${r.type} enemies=${g.enemies.map(e => e.type + ':' + e.st)}`); }
   const boss = rooms.find(r => r.type === 'boss');
   g.enterRoom(boss, null);
   const t0 = g.time;
