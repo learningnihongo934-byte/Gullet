@@ -316,3 +316,62 @@ export function statsFor(meta) {
   (WEAPON[meta && meta.weapon] || WEAPON.salt).apply(s);
   return s;
 }
+
+// ---- active items: one at a time, used with Q, recharged by kills
+export const ACTIVES = [
+  { id: 'pump', name: 'Stomach Pump', charge: 6, desc: 'Q: blast every enemy in the room', f: 'Everything comes back up eventually.' },
+  { id: 'icetray', name: 'Ice Tray', charge: 4, desc: 'Q: freeze every enemy and wipe their shots', f: 'Cold enough to make the walls shiver.' },
+  { id: 'gauze', name: 'Gauze Roll', charge: 6, desc: 'Q: heal a heart and gain a shield', f: 'Wrap it tight. It will hold. For now.' },
+  { id: 'saltlick', name: 'Salt Lick', charge: 4, desc: 'Q: throw three times as fast for 4 seconds', f: 'Pure, crystal, furious.' },
+  { id: 'smoke', name: 'Smoke Bomb', charge: 5, desc: 'Q: become untouchable for 2.5 seconds', f: 'Now you see me. Now the tower does not.' },
+  { id: 'chicken', name: 'Rubber Chicken', charge: 5, desc: 'Q: drop a decoy that everything attacks', f: 'It squeaks. They cannot resist.' },
+  { id: 'lodestone', name: 'Lodestone', charge: 5, desc: 'Q: drag enemies together, then blow them up', f: 'Pulls everything. Even trouble.' },
+  { id: 'spittoon', name: 'Spittoon', charge: 3, desc: 'Q: turn every enemy shot into teeth', f: 'Waste not.' },
+];
+export const ACTIVE = Object.fromEntries(ACTIVES.map(a => [a.id, a]));
+
+// ---- playable climbers. swap = palette swap of the base climber sprite.
+export const CHARS = [
+  { id: 'wren', name: 'Wren', desc: 'The first climber. Balanced, stubborn, hungry for the top.', quirk: 'No quirks. No excuses.', swap: {}, apply: () => {} },
+  { id: 'brick', name: 'Brick', desc: 'A wall of a man. Two more hearts and a shell, but slow on his feet.', quirk: '+2 hearts, shield each room, slower, more knockback', swap: { r: 'o', R: 'n', n: 'K', N: 'K', g: 'S', G: 'K', h: 'H', H: 'N' }, unlock: { text: 'Reach plate II', test: m => (m.stats.best || 0) >= 2 }, apply: (s, p) => { s.maxhp += 4; s.speed -= 10; s.knock += 1; s.shield += 1; } },
+  { id: 'pip', name: 'Pip', desc: 'Small, quick and very lucky. Harder to hit, easier to hurt.', quirk: 'Tiny hitbox, faster, +2 luck, one less heart', swap: { r: 'y', R: 'Y', n: 'y', N: 'Y', g: 'b', G: 'B' }, unlock: { text: 'Kill 150 things across all climbs', test: m => (m.stats.kills || 0) >= 150 }, apply: (s, p) => { s.speed += 14; s.luck += 2; s.maxhp = Math.max(2, s.maxhp - 2); if (p) p.r = 4; } },
+  { id: 'mags', name: 'Old Mags', desc: 'A retired surgeon. She knows the tower from the inside.', quirk: 'Starts with an active item and 3 bombs', swap: { r: 'w', R: 'W', n: 'W', N: 'S', g: 'w', G: 'W' }, unlock: { text: 'Keep 25 different cards', test: m => (m.found || []).length >= 25 }, apply: (s, p, g) => { if (p) { p.bombs = 3; p.active = ACTIVES[Math.floor(Math.random() * ACTIVES.length)].id; p.charge = 99; } } },
+  { id: 'hollow', name: 'Hollow', desc: 'A climber who died in here and kept going.', quirk: 'Floats over acid, walls cannot bite, shield each room, only 2 hearts', swap: { r: 'c', R: 'b', n: 'W', N: 'S', g: 'c', G: 'b', h: 'w', H: 'W' }, unlock: { text: 'Reach plate V', test: m => Math.max(m.stats.best || 0, m.stats.inf || 0) >= 5 }, apply: (s, p) => { s.flight = 1; s.biteproof = 1; s.shield += 1; s.maxhp = 4; } },
+  { id: 'fang', name: 'Fang', desc: 'Raised by something down in the bowels. Bites back.', quirk: '+30% damage, thorns, kills can heal, but hearts heal half', swap: { r: 'R', R: 'k', n: 'K', N: 'k', g: 'N', G: 'k' }, unlock: { text: 'Stop The Heart', test: m => (m.beasts || {}).heart >= 1 }, apply: s => { s.dmgMul *= 1.3; s.thorns += 1; s.leech += 1; s.healMul = 0.5; } },
+];
+export const CHAR = Object.fromEntries(CHARS.map(c => [c.id, c]));
+
+// ---- Mr. Tapewell, the parasite who runs every shop
+export const SHOP_LINES = {
+  greet: ['Teeth for trinkets, climber. Fair is fair.', 'Mind the floor. It is digesting.', 'Back again? The tower likes you. Not in a good way.', 'Everything here was swallowed. Everything is for sale.', 'Ah, a customer with all their limbs. Rare.', 'I have lived in here forty years. Business is good.'],
+  buy: ['Pleasure doing business.', 'No refunds. Nothing comes back up.', 'A fine choice. The last owner thought so too.', 'Spend it before it spends you.'],
+  broke: ['Come back with more teeth.', 'I do not do credit. Credit gets digested.', 'Teeth, climber. Teeth.'],
+};
+
+// ---- notes left by climbers who came before. Read in order across all climbs.
+export const NOTES = [
+  'Day 1. We went in through the mouth. Halvard says towers do not have mouths. Halvard is wrong.',
+  'The walls breathe. If you stand still you can feel the whole place swallow.',
+  'Salt works. Anything salt. Marta threw a whole shaker and the floor screamed.',
+  'There is a parasite with a top hat running a shop. He wanted teeth. I paid. I am not proud.',
+  'Lost Halvard in the stomach. Something big rose out of the acid and he just... went with it.',
+  'Climbed a rope out of a hole in the ceiling. Every floor is a new organ. We are going UP through it.',
+  'The lungs pulled us in and blew us out. I have not stopped coughing salt since.',
+  'Found a pocket watch stopped at 3:14. Found a hundred more. Everything the tower eats, it keeps.',
+  'The spine is lined with crowns. Climbers who got this far and stopped. I will not stop.',
+  'I heard it. The heart. You hear it in your teeth before your ears.',
+  'We stopped the heart. It went quiet. Then the walls kept moving anyway. The heart was not in charge.',
+  'Past the heart there is more. Liver, kidneys. A tongue the size of a field. It tasted us.',
+  'The nerves are lit like a city at night. Every step sends a message up. Something is listening.',
+  'There is an eye. It does not blink. It watched us climb the whole way.',
+  'The brain. It knows our names. It said them in the voices of everyone it has eaten.',
+  'It told me the tower is not hungry for food. It is hungry for climbers. We are what keeps it alive.',
+  'If you are reading this, I made it to the top and kept going. The tower goes round again. So do I.',
+  'Do not stop climbing. Stopping is how it digests you.',
+];
+
+// ---- endings
+export const ENDINGS = {
+  heart: ['The heart gives one last beat and goes still.', 'For a long moment the whole tower holds its breath. Then, far above, something keeps moving.', 'The heart was never what kept it alive.', 'You can stop here. Or you can climb on, past the heart, in an Infinite climb.'],
+  mind: ['The Mind folds in on itself and the voices go quiet, one by one.', 'In the silence you hear it, deep below: the mouth, opening again.', 'The tower is starting over. It always starts over.', 'Keep climbing.'],
+};

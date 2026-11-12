@@ -39,8 +39,8 @@ export function sfx(name) {
   last[name] = now;
   switch (name) {
     case 'shoot': tone(720 + Math.random() * 80, 0.05, 'square', 0.035, 0.6); break;
-    case 'hit': noise(0.05, 0.14, 1600); tone(180, 0.05, 'square', 0.04, 0.6); break;
-    case 'die': noise(0.18, 0.2, 700); tone(260, 0.16, 'sawtooth', 0.06, 0.3); break;
+    case 'hit': noise(0.05, 0.16, 1400 + Math.random() * 600); tone(160 + Math.random() * 60, 0.05, 'square', 0.05, 0.6); break;
+    case 'die': noise(0.18, 0.26, 700); noise(0.06, 0.2, 2400); tone(200 + Math.random() * 80, 0.18, 'sawtooth', 0.08, 0.3); tone(70, 0.12, 'sine', 0.25, 0.5); break;
     case 'hurt': tone(240, 0.22, 'sawtooth', 0.14, 0.4); noise(0.12, 0.16, 500); break;
     case 'pick': tone(880, 0.06, 'square', 0.06); tone(1320, 0.08, 'square', 0.06, 1, now + 0.06); break;
     case 'item': [523, 659, 784, 1046].forEach((f, i) => tone(f, 0.14, 'square', 0.07, 1, now + i * 0.07)); break;
@@ -53,7 +53,7 @@ export function sfx(name) {
     case 'zap': noise(0.08, 0.12, 5000); tone(1800, 0.06, 'sawtooth', 0.03, 0.5); break;
     case 'boom': noise(0.3, 0.3, 300); tone(110, 0.3, 'sine', 0.25, 0.4); break;
     case 'boss': tone(70, 1.2, 'sawtooth', 0.18, 0.7); tone(105, 1.2, 'sawtooth', 0.1, 0.7); noise(1.0, 0.1, 250); break;
-    case 'bossdie': noise(1.2, 0.3, 200); [220, 165, 110, 82].forEach((f, i) => tone(f, 0.5, 'sawtooth', 0.12, 0.5, now + i * 0.15)); break;
+    case 'bossdie': noise(0.2, 0.5, 120); tone(48, 1.4, 'sine', 0.5, 0.4); noise(1.2, 0.3, 200); [220, 165, 110, 82].forEach((f, i) => tone(f, 0.5, 'sawtooth', 0.12, 0.5, now + i * 0.15)); break;
     case 'slam': noise(0.3, 0.3, 150); tone(60, 0.3, 'sine', 0.3, 0.5); break;
     case 'beat': tone(62, 0.16, 'sine', 0.45, 0.5); tone(55, 0.14, 'sine', 0.38, 0.5, now + 0.18); break;
     case 'bite': noise(0.08, 0.25, 3000); tone(140, 0.08, 'square', 0.1, 0.5); break;
@@ -70,6 +70,11 @@ export function sfx(name) {
     case 'levelup': [523, 784, 1046, 1568].forEach((f, i) => tone(f, 0.12, 'triangle', 0.08, 1, now + i * 0.06)); break;
     case 'cache': [392, 523, 784].forEach((f, i) => tone(f, 0.12, 'square', 0.06, 1, now + i * 0.07)); break;
     case 'pickcard': tone(880, 0.08, 'square', 0.06); tone(1320, 0.14, 'triangle', 0.08, 1, now + 0.05); break;
+    case 'fuse': noise(0.3, 0.06, 5000, 0, sfxBus, 2); break;
+    case 'bigboom': noise(0.5, 0.45, 160); tone(55, 0.5, 'sine', 0.45, 0.4); break;
+    case 'secret': [523, 659, 784, 1046, 1318].forEach((f, i) => tone(f, 0.18, 'triangle', 0.08, 1, now + i * 0.08)); break;
+    case 'active': tone(220, 0.25, 'sawtooth', 0.1, 3); noise(0.25, 0.15, 900); break;
+    case 'note': tone(392, 0.3, 'triangle', 0.06); tone(523, 0.4, 'triangle', 0.05, 1, now + 0.15); break;
     case 'bounce': tone(500, 0.03, 'square', 0.02); break;
   }
 }

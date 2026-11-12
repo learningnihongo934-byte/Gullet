@@ -49,7 +49,7 @@ export class Mirror {
       const fresh = !p;
       if (!p) p = this.players[i] = { id: i, st: {} };
       Object.assign(p, { hp: q.hp, inv: q.inv, down: !!q.dn, face: q.f, moving: !!q.mv, anim: q.an, dashT: q.da ? 0.1 : 0, present: !!q.pr, shieldUp: !!q.sh, orbA: q.oa, items: q.it, pend: q.pd, offer: q.of });
-      p.st.maxhp = q.mh; p.st.orbit = q.ob; p.st.aura = q.au; p.st.buddy = q.bd; p.weapon = q.wp;
+      p.st.maxhp = q.mh; p.st.orbit = q.ob; p.st.aura = q.au; p.st.buddy = q.bd; p.weapon = q.wp; p.char = q.chr; p.bombs = q.bm; p.active = q.ac; p.charge = q.cg; p.frenzy = q.fr ? 1 : 0;
       this.ptarget[i] = [q.x, q.y];
       if (fresh || Math.hypot(p.x - q.x, p.y - q.y) > 40) { p.x = q.x; p.y = q.y; }
     });
@@ -58,7 +58,7 @@ export class Mirror {
     this.enemies = s.E.map(q => {
       seen.add(q.id);
       const e = prev.get(q.id) || { id: q.id, x: q.x, y: q.y };
-      Object.assign(e, { type: q.ty, r: q.r, flash: q.fl ? 0.05 : 0, hp: q.hp, max: q.mx, st: q.s, boss: !!q.b, spawnT: q.sp, z: q.z, segs: q.sg, pulse: q.pu, br: q.br, a: q.a, age: q.ag, small: !!q.sm, under: !!q.u, hide: !!q.hd, segR: q.sr, beamLen: q.ln, t: q.t, burn: q.bu, poison: q.po });
+      Object.assign(e, { type: q.ty, r: q.r, flash: q.fl ? 0.05 : 0, hp: q.hp, max: q.mx, st: q.s, boss: !!q.b, spawnT: q.sp, z: q.z, segs: q.sg, pulse: q.pu, br: q.br, a: q.a, age: q.ag, small: !!q.sm, elite: !!q.el, under: !!q.u, hide: !!q.hd, segR: q.sr, beamLen: q.ln, t: q.t, burn: q.bu, poison: q.po });
       this.target.set(q.id, [q.x, q.y]);
       if (Math.hypot(e.x - q.x, e.y - q.y) > 40) { e.x = q.x; e.y = q.y; }
       return e;
@@ -67,7 +67,8 @@ export class Mirror {
     const B = [];
     for (let i = 0; i < s.B.length; i += 7) B.push({ x: s.B[i], y: s.B[i + 1], vx: s.B[i + 2], vy: s.B[i + 3], r: s.B[i + 4], k: s.B[i + 5], en: !!s.B[i + 6] });
     this.bullets = B;
-    this.pickups = s.K; this.hazards = s.H; this.valve = s.V;
+    this.pickups = s.K; this.hazards = s.H; this.valve = s.V; this.decoy = s.DC; this.npcSay = s.NS;
+    if (this.room) this.room.waves = s.WV;
   }
   /** Smooth movement between 20Hz snapshots. */
   tick(dt) {

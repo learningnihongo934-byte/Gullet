@@ -30,6 +30,7 @@
         <button id="bCamp"><i>iv.</i> Basecamp</button>
         <button id="bIndex"><i>v.</i> Index</button>
         <button id="bHelp"><i>v.</i> Field notes</button>
+        <button id="bIntro"><i>vi.</i> Prologue</button>
         <button id="bLog"><i>vi.</i> Update log</button>
       </nav>
       <dl class="ledger" id="ledger"></dl>
@@ -39,7 +40,8 @@
     <section id="arm" class="screen plate wide hidden">
       <div class="plate-head"><span>Plate 0d</span><span>What the Climber Carries</span></div>
       <h2 id="armTitle">Choose your weapon</h2>
-      <p class="sub">Every card you keep builds on top of it. Your pick is remembered for next time.</p>
+      <p class="sub">Pick a climber and a weapon. Every card you keep builds on top of them. Your picks are remembered.</p>
+      <div id="chars" class="chars"></div>
       <p class="status" id="armWarn"></p>
       <div id="weapons" class="weapons"></div>
       <nav class="menu"><button data-back><i>&larr;</i> Back</button></nav>
@@ -49,7 +51,7 @@
       <div class="plate-head"><span>Appendix</span><span>An Index of the Tower and its Contents</span></div>
       <h2>Index</h2>
       <div class="tabs" role="tablist">
-        <button data-tab="cards" role="tab"></button><button data-tab="monsters" role="tab"></button><button data-tab="weapons" role="tab"></button>
+        <button data-tab="cards" role="tab"></button><button data-tab="actives" role="tab"></button><button data-tab="monsters" role="tab"></button><button data-tab="weapons" role="tab"></button><button data-tab="climbers" role="tab"></button><button data-tab="notes" role="tab"></button>
       </div>
       <div class="ixwrap"><div id="ixGrid" class="ixgrid"></div><aside id="ixDetail" class="ixdetail"></aside></div>
       <nav class="menu"><button data-back><i>&larr;</i> Back</button></nav>
@@ -67,6 +69,7 @@
       <h2>Climb with a friend</h2>
       <p class="sub">One of you opens a room and shares the four-letter code. The other joins with it. The host picks the mode and runs the climb.</p>
       <div class="armrow"><span>Mode:</span><div class="modes" id="coopModes"><button data-mode="heart" class="on">To the heart <small>6 plates</small></button><button data-mode="inf">Infinite <small>beyond the heart</small></button></div></div>
+      <div class="armrow"><span>Your climber:</span><div id="coopChars" class="iconrow"></div></div>
       <div class="armrow"><span>Your weapon:</span><div id="coopWeapons"></div></div>
       <div class="cols">
         <div>
@@ -102,6 +105,8 @@
         <dt>W A S D</dt><dd>Move</dd>
         <dt>Arrow keys, or hold the mouse</dt><dd>Throw salt. Salt is the only thing the tower is afraid of.</dd>
         <dt>Space or Shift</dt><dd>Dash. You can't be hit while dashing.</dd>
+        <dt>E</dt><dd>Drop a bomb. Bombs break lumps and crack open hidden walls.</dd>
+        <dt>Q</dt><dd>Use your active item once kills have charged it</dd>
         <dt>1 2 3 (4 5)</dt><dd>Pick a level-up card</dd>
         <dt>Esc</dt><dd>Pause, see your items, save and quit</dd>
       </dl>
@@ -115,6 +120,9 @@
         <li>In co-op, a fallen climber comes back when the room is cleared.</li>
         <li>Infinite climbs go past the heart into the liver, kidneys, tongue, nerves, eye and brain, then loop around, harder each time.</li>
         <li>Stopping each of the first six organs for the first time unlocks a new weapon.</li>
+        <li>A cracked wall hides a secret room. Bomb it.</li>
+        <li>Golden enemies are tough and drop a cache. Challenge rooms throw three waves at you and pay two.</li>
+        <li>Climbers who came before you left notes. Collect them all to learn what the tower is.</li>
         <li>Save and quit any time. You'll pick up in the same room.</li>
       </ul>
       <nav class="menu"><button data-back><i>&larr;</i> Back</button></nav>
@@ -148,6 +156,13 @@
     </section>
 
     <div id="lvl" class="hidden"><div class="lvl-head">Level <b id="lvlNo"></b> &middot; keep one of <span id="lvlOf">three</span> <span id="lvlMore"></span></div><div id="cards"></div></div>
+    <section id="ending" class="screen plate hidden">
+      <div class="plate-head"><span>Finis</span><span id="endingWhere"></span></div>
+      <h2 id="endingTitle"></h2>
+      <div id="endingText" class="endingtext"></div>
+      <nav class="menu"><button id="bEndingGo"><i>&rarr;</i> Continue</button></nav>
+    </section>
+    <div id="intro" class="hidden"><p id="introLine"></p><span class="skip">Press any key to skip</span></div>
     <div id="toast" class="hidden"></div>
     <div id="card" class="hidden"></div>
   </div>

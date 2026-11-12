@@ -14,6 +14,7 @@ case "${1:-dev}" in
     node tools/smoke.mjs
     node tools/items.mjs
     node tools/endless.mjs
+    node tools/systems.mjs
     ;;
   deploy) npx -y wrangler@4 deploy ;;
   desktop) [ -d node_modules/electron ] || npm install; npx electron . ;;

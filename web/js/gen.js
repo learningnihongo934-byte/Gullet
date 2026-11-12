@@ -58,6 +58,27 @@ export function genFloor(fi, seed) {
       r.visited = false;
       r.drops = [];
     }
+    // a secret room tucked against two or more rooms, its entrances hidden behind cracked walls
+    const cands = [];
+    for (let y = 0; y < 9; y++) for (let x = 0; x < 9; x++) {
+      if (taken.has(key(x, y))) continue;
+      const nbs = NB.map(([dx, dy, d]) => [taken.get(key(x + dx, y + dy)), d]).filter(([r]) => r && r.type !== 'boss' && r.type !== 'start');
+      if (nbs.length >= 2) cands.push({ x, y, nbs });
+    }
+    if (cands.length) {
+      const c = cands[Math.floor(rnd() * cands.length)];
+      const sr = { gx: c.x, gy: c.y, type: 'secret', key: key(c.x, c.y), doors: {}, visited: false, drops: [], cleared: true };
+      const OPPD = { n: 's', s: 'n', w: 'e', e: 'w' };
+      for (const [r, d] of c.nbs) { sr.doors[d] = true; r.secret = r.secret || {}; r.secret[OPPD[d]] = true; }
+      sr.tiles = layout(sr, rnd, fi);
+      rooms.push(sr);
+    }
+    const fights = rooms.filter(r => r.type === 'fight');
+    for (let i = fights.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [fights[i], fights[j]] = [fights[j], fights[i]]; }
+    if (fi >= 1 && fights[0]) fights[0].elite = 1;
+    if (fi >= 1 && fights[1]) { fights[1].waves = 3; fights[1].challenge = 1; }
+    if (fights[2]) fights[2].note = 1;
+    for (const r of fights) if (fi >= 2 && !r.challenge && rnd() < 0.15) r.dark = 1;
     return { fi, seed, rooms };
   }
   throw new Error('floor gen failed');

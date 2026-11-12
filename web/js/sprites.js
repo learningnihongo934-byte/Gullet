@@ -288,6 +288,20 @@ const WEAPON_ART = {
 const HEART = ['.kk.kk.', 'krrkerk', 'krrrrrk', '.krrrk.', '..krk..', '...k...'];
 const HEART_E = HEART.map(r => r.replace(/[re]/g, 'K'));
 const TOOTH = ['.kkkkk.', 'kwwewwk', 'kwwwwwk', 'kwwwwwk', 'kWwwwWk', '.kWkWk.', '.kk.kk.'];
+const ACTIVE_ART = {
+  pump: ['....kkkk....', '....kssk....', '..kkkkkkkk..', '..krrrrrrk..', '..kreerrrk..', '..krrrrrrk..', '..kkkkkkkk..', '....kssk....', '....kssk....', '...kkkkkk...', '...kSSSSk...', '....kkkk....'],
+  icetray: ['kkkkkkkkkkkk', 'kcckcckcckck', 'kcekcekcekck', 'kkkkkkkkkkkk', 'kcckcckcckck', 'kcekcekcekck', 'kkkkkkkkkkkk', 'kbbbbbbbbbbk', '.kkkkkkkkkk.'],
+  gauze: ['...kkkkkk...', '..kwwwwwwk..', '.kwwWwwWwwk.', '.kwWwwwwWwk.', '.kwwwkkwwwk.', '.kwwkrrkwwk.', '.kwwkrrkwwk.', '.kwwwkkwwwk.', '.kWwwwwwwWk.', '..kWWWWWWk..', '...kkkkkkkkk'],
+  saltlick: ['....kkkk....', '..kkwwwwkk..', '.kwwewwwwwk.', '.kwwwwwwwWk.', 'kwwwwwwwwwWk', 'kwwwwwwwwWWk', 'kWwwwwwwWWWk', '.kWWWWWWWWk.', '..kkkkkkkk..'],
+  smoke: ['..kk..kk....', '.kssk kssk..', 'kssssksssk..', 'ksSssssssk..', '.kssssSssk..', '..kkkkkkk...', '...kKKKKk...', '..kKKKKKKk..', '..kKKwKKKk..', '..kKKKKKKk..', '...kkkkkk...'],
+  chicken: ['..kkk.......', '.kyyyk......', '.kykyrr.....', '.kyyykk.....', '..kyyyk.....', '..kyyyykkk..', '.kyyyyyyyyk.', '.kyyyyyyyyk.', '..kYyyyyYk..', '...kkkkkk...', '....k..k....'],
+  lodestone: ['....kkkk....', '..kkSSSSkk..', '.kSSsSSSSSk.', '.kSsrrrrSSk.', 'kSSrkkkkrSSk', 'kSSrk..krSSk', 'kSSrkkkkrSSk', '.kSSrrrrSSk.', '.kSSSSSSSSk.', '..kkSSSSkk..', '....kkkk....'],
+  spittoon: ['..kkkkkkkk..', '.kyyyyyyyyk.', '..kkkkkkkk..', '...kyyyyk...', '..kyyyyyyk..', '.kyyyeyyyyk.', '.kyyyyyyyYk.', '.kYyyyyyyYk.', '..kYYYYYYk..', '...kkkkkk...'],
+};
+const BOMB = ['......kyk...', '.....k.y....', '....k.......', '..kkkkk.....', '.kKKKKKk....', 'kKKwKKKKk...', 'kKwKKKKKk...', 'kKKKKKKKk...', 'kKKKKKKKk...', '.kKKKKKk....', '..kkkkk.....'];
+const NOTE = ['.kkkkkkkk...', '.kwwwwwwWk..', '.kwkkkwwwWk.', '.kwwwwwwwwk.', '.kwkkkkkwwk.', '.kwwwwwwwwk.', '.kwkkkkwwwk.', '.kwwwwwwwwk.', '.kWWWWWWWWk.', '.kkkkkkkkkk.'];
+const TAPEWELL = ['....kkkkkk......', '....kKKKKk......', '....kKKKKk......', '...kkkkkkkk.....', '....kwwwwk......', '...kwkwwkwk.....', '...kwwwwwwk.....', '...kwrrrrwk.....', '....kwwwwk......', '...kwwwwwwk.....', '..kwwkwwkwwk....', '..kwwwwwwwwk....', '...kwwwwwwk.....', '....kwwwwwk.....', '.....kwwwwwk....', '......kwwwwwk...', '.......kkkwwk...', '..........kk....'];
+const CROWN = ['k.k.k.k', 'kykykyk', 'kyyryyk', 'kkkkkkk'];
 const CACHE = ['....kk....', '...kyyk...', '..kkkkkk..', '.knnnnnnk.', 'knnnynnnnk', 'kyyyyyyyyk', 'knnnynnnnk', 'knnnynnnnk', '.kNNyNNNk.', '..kkkkkk..'];
 const MARROW = ['.kk...kk.', 'kyokkkoyk', '.koooook.', 'kyokkkoyk', '.kk...kk.'];
 
@@ -298,6 +312,12 @@ function lumpArt(pal) {
   return blob(16, 16, (x, y) => Math.hypot((x - 8) / 7.2, (y - 8.6) / 6.6) < 1 + Math.sin(Math.atan2(y - 8, x - 8) * 5) * 0.06, pal);
 }
 
+export function buildChars(CHARS) {
+  for (const c of CHARS) {
+    add('c_' + c.id + '_a', paint(climber(FACE, LEGS_A), 16, 16, c.swap)); add('c_' + c.id + '_b', paint(climber(FACE, LEGS_B), 16, 16, c.swap));
+    add('c_' + c.id + '_u', paint(climber(BACK, LEGS_A), 16, 16, c.swap)); add('c_' + c.id + '_v', paint(climber(BACK, LEGS_B), 16, 16, c.swap));
+  }
+}
 export function buildSprites() {
   add('p0a', paint(climber(FACE, LEGS_A), 16, 16)); add('p0b', paint(climber(FACE, LEGS_B), 16, 16));
   add('p0u', paint(climber(BACK, LEGS_A), 16, 16)); add('p0v', paint(climber(BACK, LEGS_B), 16, 16));
@@ -308,7 +328,9 @@ export function buildSprites() {
   for (const k in ITEM_ART) add('i_' + k, paint(ITEM_ART[k], 12, 12));
   for (const k in WEAPON_ART) add('w_' + k, paint(WEAPON_ART[k], 12, 12));
   add('heart', paint(HEART, 7, 6)); add('heartE', paint(HEART_E, 7, 6));
-  add('tooth', paint(TOOTH, 7, 7)); add('cache', paint(CACHE, 10, 10)); add('marrow', paint(MARROW, 9, 5));
+  add('tooth', paint(TOOTH, 7, 7)); add('cache', paint(CACHE, 10, 10));
+  for (const k in ACTIVE_ART) add('a_' + k, paint(ACTIVE_ART[k], 12, 12));
+  add('bomb', paint(BOMB, 12, 12)); add('note', paint(NOTE, 12, 12)); add('tapewell', paint(TAPEWELL, 16, 18)); add('crown', paint(CROWN, 7, 4)); add('marrow', paint(MARROW, 9, 5));
 }
 
 /** Per-floor art (lumps + bosses) built on demand. */

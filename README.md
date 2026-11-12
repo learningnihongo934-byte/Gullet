@@ -12,6 +12,11 @@ Play it at **https://gullet.rennko.tech**
 - **38 monster types and 12 organs**, including snipers, bombers, healers, mine-layers, wall-crawlers, teleporters, summoners and a molar that pretends to be a tooth.
 - **12 weapons**: 6 to start with, plus 6 won by stopping each of the first six organs for the first time.
 - **The Index** records every card, monster, organ and weapon you have found.
+- **A prologue**: a short animated opening shows how the tower began.
+- **Bombs (E) and 8 active items (Q)** charged by kills; bombs break lumps and crack open secret rooms.
+- **6 climbers** to unlock (Wren, Brick, Pip, Old Mags, Hollow, Fang), each with their own look and quirk.
+- **Story**: 18 notes from earlier climbers, Mr. Tapewell the parasite shopkeeper, and endings for the Heart and the Mind.
+- **Room surprises**: secret rooms, golden mini-bosses, three-wave challenge rooms and pitch-dark rooms.
 - **Desktop app** for Mac and Windows (fullscreen, works offline; co-op still goes online). Download it from [Releases](https://github.com/learningnihongo934-byte/Gullet/releases).
 - **Save and quit** any time; the climb resumes in the same room.
 - **Basecamp**: marrow you carry home buys permanent upgrades.
@@ -24,6 +29,8 @@ Play it at **https://gullet.rennko.tech**
 | WASD | Move |
 | Arrow keys / hold mouse | Throw salt |
 | Space / Shift | Dash (you can't be hit while dashing) |
+| E | Drop a bomb |
+| Q | Use your active item |
 | 1 2 3 | Pick a level-up card |
 | Esc | Pause, items, save and quit |
 

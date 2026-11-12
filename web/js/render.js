@@ -1,6 +1,7 @@
 // Gullet renderer. Draws a "view" (the host's Game, or the guest's mirror of it) at 320x196 pixels.
-import { TILE, RW, RH, OX, OY, W, H, CX, CY, FLOORS, FL, BOSSES, ITEM } from './data.js';
+import { TILE, RW, RH, OX, OY, W, H, CX, CY, FLOORS, FL, BOSSES, ITEM, DOORS } from './data.js';
 import { SPR, floorArt, bosses, text, whiteOf, blob } from './sprites.js';
+import { ACTIVE } from './data.js';
 import { mulberry32 } from './gen.js';
 
 const mk = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
@@ -23,7 +24,7 @@ const BCOL = { a: ['#86d04a', '#1a3010', '#d0ff90'], c: ['#6a4a2a', '#1a0c06', '
 export class Renderer {
   constructor(canvas) {
     this.c = canvas; this.x = canvas.getContext('2d'); this.x.imageSmoothingEnabled = false;
-    this.bg = new Map(); this.decals = new Map(); this.parts = []; this.ghosts = [[], []]; this.t = 0;
+    this.bg = new Map(); this.decals = new Map(); this.parts = []; this.floats = []; this.flashT = 0; this.ghosts = [[], []]; this.t = 0;
     this.dots = new Map(); this.whites = new WeakMap(); this.hurtT = 0; this.clearT = new Map();
     this.vig = this.makeVignette();
   }
@@ -48,7 +49,7 @@ export class Renderer {
 
   // ---------- room background
   roomCanvas(fi, room) {
-    const key = fi + ':' + room.key;
+    const key = fi + ':' + room.key + ':' + (room.bgv || 0);
     let c = this.bg.get(key);
     if (c) return c;
     const F = FL(fi), P = F.pal, A = floorArt(F.part, F), R = mulberry32(hash(key));
@@ -106,6 +107,12 @@ export class Renderer {
       if (ch === 'o') { x.fillStyle = 'rgba(20,4,8,0.45)'; x.fillRect(tx * TILE + 2, ty * TILE + 12, 13, 4); x.drawImage(R() < 0.5 ? A.lump : A.lump2, tx * TILE, ty * TILE); }
       if (ch === 't') { x.fillStyle = 'rgba(20,4,8,0.45)'; x.fillRect(tx * TILE + 3, ty * TILE + 12, 11, 4); x.drawImage(SPR.tooth.c, tx * TILE, ty * TILE); }
     }
+    for (const d in room.secret || {}) {
+      if (room.doors && room.doors[d]) continue;
+      const [tx, ty] = DOORS[d], cx = tx * TILE + 8, cy = ty * TILE + 8;
+      x.fillStyle = '#0c0206';
+      for (let i = 0; i < 4; i++) { let px = cx + (i - 1.5) * 2, py = cy - 6; for (let k = 0; k < 11; k++) { px += Math.sin(i * 3 + k) * 1.1; py += 1; x.fillRect(Math.round(px), Math.round(py), 1, 1); if (k % 4 === 2) x.fillRect(Math.round(px) + (i % 2 ? 1 : -1), Math.round(py), 1, 1); } }
+    }
     if (room.type === 'start' && fi === 0) {
       text(x, 'WASD  MOVE', 152, 52, P.speck, null, 'center');
       text(x, 'ARROWS / MOUSE  THROW SALT', 152, 62, P.speck, null, 'center');
@@ -136,8 +143,9 @@ export class Renderer {
   fx(view, e) {
     const P = (x, y, c, n, sp = 60, life = 0.35, size = 1) => { for (let i = 0; i < n; i++) { const a = rnd() * 6.28, s = rr(sp * 0.3, sp); this.parts.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, c, life: rr(life * 0.6, life), max: life, size }); } };
     switch (e.k) {
-      case 'hit': P(e.x, e.y - 2, e.c, e.crit ? 8 : 4, 70); if (e.crit) P(e.x, e.y - 6, '#f2d15c', 5, 50); break;
-      case 'die': P(e.x, e.y, e.c, 14, 90, 0.45); this.splat(view, e.x, e.y, e.c, 1); break;
+      case 'hit': P(e.x, e.y - 2, e.c, e.crit ? 8 : 4, 70); if (e.crit) P(e.x, e.y - 6, '#f2d15c', 5, 50); if (e.d >= 0.5 && this.floats.length < 40) this.floats.push({ x: e.x + rr(-4, 4), y: e.y - 12, txt: e.d >= 10 ? Math.round(e.d) : e.d, life: e.crit ? 0.8 : 0.55, max: e.crit ? 0.8 : 0.55, crit: e.crit }); break;
+      case 'die': P(e.x, e.y, e.c, 14, 90, 0.45); P(e.x, e.y, e.c, 6, 60, 0.6, 2); this.parts.push({ ring: 1, x: e.x, y: e.y, r: 16, life: 0.18, max: 0.18, c: '#f6ecd9' }); this.parts.push({ pop: 1, x: e.x, y: e.y, life: 0.08, max: 0.08 }); this.splat(view, e.x, e.y, e.c, 1); break;
+      case 'bossdie': this.flashT = 0.55; for (let i = 0; i < 4; i++) this.parts.push({ ring: 1, x: e.x, y: e.y, r: 40 + i * 30, life: 0.4 + i * 0.12, max: 0.4 + i * 0.12, c: i % 2 ? '#f2d15c' : '#f6ecd9' }); break;
       case 'splat': P(e.x, e.y, e.en ? (e.kk === 'r' ? '#d8304a' : e.kk === 'n' ? '#e8dcc0' : '#c8d44a') : '#f6ecd9', e.big ? 10 : 3, e.big ? 70 : 40, 0.25); if (e.big) this.splat(view, e.x, e.y, '#bcd04a', 1.2); break;
       case 'hurt': P(e.x, e.y - 4, '#d8304a', 10, 80, 0.4); if (e.p === view.me) this.hurtT = 0.3; break;
       case 'shield': P(e.x, e.y - 4, '#9ad8dc', 12, 70, 0.4); break;
@@ -168,6 +176,8 @@ export class Renderer {
     for (const h of view.hazards) this.drawHazard(h, P);
     if (view.valve) this.drawValve(view.valve);
     for (const k of view.pickups) this.drawPickup(k, view);
+    if (view.room.type === 'shop') this.drawShopkeeper(view);
+    if (view.decoy) { const d = view.decoy, bob = Math.abs(Math.sin(this.t * 8)) * 3; this.shadow(d.x, d.y + 4, 5); x.drawImage(SPR.a_chicken.c, Math.round(d.x - 6), Math.round(d.y - 10 - bob)); }
     const ents = [];
     for (const p of view.players) if (p.present) ents.push({ y: p.y, p });
     for (const e of view.enemies) ents.push({ y: e.y + (e.boss ? 6 : 0), e });
@@ -175,6 +185,7 @@ export class Renderer {
     for (const en of ents) if (en.e && !en.e.under) this.shadow(en.e.x, en.e.y + (en.e.boss ? en.e.r * 0.6 : 5), en.e.r * (en.e.boss ? 1.1 : 0.9) * (1 - Math.min(0.6, (en.e.z || 0) / 60)));
     for (const en of ents) if (en.p) this.shadow(en.p.x, en.p.y + 3, 5);
     for (const en of ents) { if (en.p) this.drawPlayer(en.p, view); else this.drawEnemy(en.e, view); }
+    if (view.room.dark) this.drawDark(view);
     for (const b of view.bullets) {
       const img = this.dot(b.k, b.r);
       if (!b.en && b.k !== 'n') this.shadow(b.x, b.y + 6, 2);
@@ -190,6 +201,7 @@ export class Renderer {
     // living walls: a faint pulse that gets stronger near the heart
     const pulse = (Math.sin(this.t * (2 + view.fi * 0.5)) + 1) / 2;
     x.fillStyle = `rgba(120,10,30,${0.02 + pulse * 0.025 * (1 + view.fi * 0.4)})`; x.fillRect(OX, OY, RW * TILE, RH * TILE);
+    if (this.flashT > 0) { this.flashT -= dt; x.fillStyle = `rgba(255,248,236,${Math.min(0.85, this.flashT * 1.6)})`; x.fillRect(0, 0, W, H); }
     if (this.hurtT > 0) { this.hurtT -= dt; x.fillStyle = `rgba(200,20,40,${this.hurtT})`; x.fillRect(0, 0, W, 3); x.fillRect(0, H - 3, W, 3); x.fillRect(0, 0, 3, H); x.fillRect(W - 3, 0, 3, H); }
     const me = view.players[view.me];
     if (me && me.present && !me.down && me.hp <= 2) { const a = (Math.sin(this.t * 6) + 1) * 0.08; x.fillStyle = `rgba(200,20,40,${a})`; x.fillRect(0, OY, W, H - OY); }
@@ -245,8 +257,11 @@ export class Renderer {
   }
   drawPickup(k, view) {
     const x = this.x, bob = Math.round(Math.sin(this.t * 3 + k.x) * 1.5);
-    if (k.kind === 'item' || (k.kind === 'cache' && k.ped)) {
-      const it = k.kind === 'cache' ? null : SPR['i_' + k.id];
+    if (k.kind === 'note') { this.shadow(k.x, k.y + 5, 5); x.drawImage(SPR.note.c, k.x - 6, k.y - 9 + bob); if ((this.t * 2) % 2 < 1) { x.fillStyle = '#f6ecd9'; x.fillRect(k.x + 6, k.y - 10 + bob, 1, 1); } return; }
+    if (k.kind === 'bomb' && !k.ped) { this.shadow(k.x, k.y + 4, 4); x.drawImage(SPR.bomb.c, k.x - 6, k.y - 9 + bob); if ((k.v || 1) > 1) text(x, 'x' + k.v, k.x + 6, k.y - 2, '#f6ecd9'); return; }
+    if (k.kind === 'active' && !k.ped) { this.shadow(k.x, k.y + 4, 5); x.drawImage(SPR['a_' + k.id].c, k.x - 6, k.y - 10 + bob); return; }
+    if (k.kind === 'item' || (k.kind === 'cache' && k.ped) || k.kind === 'active' || k.kind === 'bomb') {
+      const it = k.kind === 'cache' ? null : k.kind === 'active' ? SPR['a_' + k.id] : k.kind === 'bomb' ? SPR.bomb : SPR['i_' + k.id];
       const feed = k.price === 'heart';
       // pedestal: a fleshy stump, or a mouth for the feeding altar
       this.shadow(k.x, k.y + 6, 7);
@@ -269,6 +284,34 @@ export class Renderer {
     else if (k.kind === 'marrow') x.drawImage(SPR.marrow.c, k.x - 4, k.y - 3 + bob);
     else if (k.kind === 'cache') this.drawCache(k.x, k.y - 4 + bob);
   }
+  drawDark(view) {
+    if (!this.darkC) { this.darkC = mk(W, H); }
+    const c = this.darkC, g = c.getContext('2d');
+    g.globalCompositeOperation = 'source-over'; g.clearRect(0, 0, W, H);
+    g.fillStyle = 'rgba(6,0,3,0.94)'; g.fillRect(OX, OY, RW * TILE, RH * TILE);
+    g.globalCompositeOperation = 'destination-out';
+    const lights = view.players.filter(p => p.present).map(p => [p.x, p.y - 4, 50]);
+    if (view.valve) lights.push([view.valve.x, view.valve.y, 24]);
+    for (const [lx, ly, r] of lights) for (let i = 0; i < 4; i++) { g.fillStyle = `rgba(0,0,0,${0.35 + i * 0.2})`; const rr2 = r * (1 - i * 0.18); g.beginPath(); g.arc(Math.round(lx), Math.round(ly), rr2, 0, Math.PI * 2); g.fill(); }
+    g.globalCompositeOperation = 'source-over';
+    this.x.drawImage(c, 0, 0);
+  }
+  drawShopkeeper(view) {
+    const x = this.x, t = this.t, sx = CX - 8, sy = OY + 26 + Math.round(Math.sin(t * 2) * 1.5);
+    this.shadow(CX, OY + 46, 6);
+    x.drawImage(SPR.tapewell.c, sx, sy);
+    const say = view.npcSay;
+    if (!say || view.time - say.t > 4.5) return;
+    const words = say.text.toUpperCase().split(' '), lines = [];
+    let cur = '';
+    for (const w of words) { if ((cur + ' ' + w).trim().length > 30) { lines.push(cur.trim()); cur = w; } else cur += ' ' + w; }
+    if (cur.trim()) lines.push(cur.trim());
+    const bw = Math.max(...lines.map(l => l.length)) * 4 + 6, bh = lines.length * 7 + 4, bx = Math.max(OX + 18, sx - bw - 6), by = sy - 2;
+    x.fillStyle = '#1b0d12'; x.fillRect(bx - 1, by - 1, bw + 2, bh + 2);
+    x.fillStyle = '#efe4cc'; x.fillRect(bx, by, bw, bh);
+    x.fillStyle = '#efe4cc'; x.fillRect(bx + bw, by + 5, 4, 2); x.fillStyle = '#1b0d12'; x.fillRect(bx + bw + 4, by + 4, 1, 1); x.fillRect(bx + bw + 4, by + 7, 1, 1);
+    lines.forEach((l, i) => text(x, l, bx + 3, by + 3 + i * 7, '#5a1a1a', null));
+  }
   drawCache(cx, cy) {
     const x = this.x, t = this.t;
     x.fillStyle = (t * 6) % 2 < 1 ? '#f2d15c' : '#e8873a';
@@ -290,6 +333,14 @@ export class Renderer {
     } else if (h.k === 'spike') {
       x.fillStyle = '#1b0d12'; x.fillRect(Math.round(h.x) - 4, Math.round(h.y) - 7, 9, 9);
       x.fillStyle = '#f6ecd9'; for (let i = 0; i < 7; i++) x.fillRect(Math.round(h.x) - Math.floor((7 - i) / 2), Math.round(h.y) - 6 + i, 7 - (6 - i) + 1 > 0 ? Math.max(1, i) : 1, 1);
+    } else if (h.k === 'bomb') {
+      const k = h.t / h.life, s2 = 1 + (k > 0.7 && (t * 20) % 2 < 1 ? 0.15 : 0), img = k > 0.7 && (t * 16) % 2 < 1 ? this.white(SPR.bomb.c) : SPR.bomb.c;
+      this.shadow(h.x, h.y + 4, 5);
+      x.drawImage(img, Math.round(h.x - 6 * s2), Math.round(h.y - 10 * s2), Math.round(12 * s2), Math.round(12 * s2));
+      x.fillStyle = (t * 18) % 2 < 1 ? '#f2d15c' : '#e8873a'; x.fillRect(Math.round(h.x + 1), Math.round(h.y - 11 - Math.random() * 2), 1, 1);
+    } else if (h.k === 'pull') {
+      x.fillStyle = '#9aa0a8';
+      for (let i = 0; i < 18; i++) { const a = i / 18 * Math.PI * 2 + t * 6, r = 40 * (1 - (h.t / h.life + i / 18) % 1); x.fillRect(Math.round(h.x + Math.cos(a) * r), Math.round(h.y + Math.sin(a) * r * 0.75), 1, 1); }
     } else if (h.k === 'epool') {
       const r = h.r * Math.min(1, h.t / 0.4), a = Math.min(1, (h.life - h.t) * 2);
       x.fillStyle = `rgba(150,190,40,${0.55 * a})`;
@@ -330,7 +381,7 @@ export class Renderer {
     for (const q of g) { q.life -= 1 / 60; }
     while (g.length && g[0].life <= 0) g.shift();
     const frame = p.moving ? Math.floor(p.anim) % 2 : 0;
-    const name = 'p' + id + (p.face === 'u' ? (frame ? 'v' : 'u') : (frame ? 'b' : 'a'));
+    const name = 'c_' + (SPR['c_' + p.char + '_a'] ? p.char : 'wren') + '_' + (p.face === 'u' ? (frame ? 'v' : 'u') : (frame ? 'b' : 'a'));
     const s = SPR[name];
     for (const q of g) { x.globalAlpha = q.life * 2.5; x.drawImage(this.white(s.c), Math.round(q.x - 8), Math.round(q.y - 13)); }
     x.globalAlpha = 1;
@@ -342,8 +393,14 @@ export class Renderer {
       return;
     }
     if (!(p.inv > 0 && Math.floor(t * 18) % 2)) {
-      const px = Math.round(p.x - 8), py = Math.round(p.y - 13 - (frame ? 1 : 0));
-      if (p.face === 'l') { x.save(); x.scale(-1, 1); x.drawImage(s.c, -px - 16, py); x.restore(); } else x.drawImage(s.c, px, py);
+      const rc = p.recoil > 0 ? 1 : 0, F = { u: [0, 1], d: [0, -1], l: [1, 0], r: [-1, 0] }[p.face] || [0, 0];
+      if (p.recoil > 0) p.recoil -= 1 / 60;
+      const px = Math.round(p.x - 8 + F[0] * rc), py = Math.round(p.y - 13 - (frame ? 1 : 0) + F[1] * rc);
+      if (p.char === 'hollow') x.globalAlpha = 0.78;
+      const sc = p.char === 'pip' ? 0.8 : 1, sw = Math.round(16 * sc), ox = Math.round((16 - sw) / 2), oy = 16 - sw;
+      if (p.face === 'l') { x.save(); x.scale(-1, 1); x.drawImage(s.c, -px - 16 + ox, py + oy, sw, sw); x.restore(); } else x.drawImage(s.c, px + ox, py + oy, sw, sw);
+      x.globalAlpha = 1;
+      if (p.frenzy > 0 && Math.floor(t * 12) % 2) { x.fillStyle = '#f6ecd9'; x.fillRect(Math.round(p.x - 6), Math.round(p.y - 16), 1, 1); x.fillRect(Math.round(p.x + 6), Math.round(p.y - 14), 1, 1); }
     }
     if (p.shieldUp) { x.fillStyle = '#9ad8dc'; for (let a = 0; a < 12; a++) { const ang = a / 12 * Math.PI * 2 + t; x.fillRect(Math.round(p.x + Math.cos(ang) * 10), Math.round(p.y - 5 + Math.sin(ang) * 10), 1, 1); } }
     if (p.st.aura) { x.fillStyle = 'rgba(200,230,150,0.55)'; for (let a = 0; a < 28; a++) { const ang = a / 28 * Math.PI * 2 - t * 0.8; if ((a + Math.floor(t * 6)) % 3) x.fillRect(Math.round(p.x + Math.cos(ang) * 26), Math.round(p.y - 2 + Math.sin(ang) * 20), 1, 1); } }
@@ -366,8 +423,9 @@ export class Renderer {
       x.fillStyle = FL(view.fi).pal.floor2; x.fillRect(Math.round(e.x - 4 + shake), Math.round(e.y), 8, 1);
       return;
     }
-    let scale = e.small ? 0.6 : 1;
+    let scale = e.small ? 0.6 : e.elite ? 1.45 : 1;
     let sxk = 1 + Math.sin(e.age * 7 + e.id) * 0.06, syk = 2 - sxk;
+    if (e.flash > 0) { sxk = 1.18; syk = 0.84; }
     if (e.type === 'gnat') { sxk = 1; syk = 1; }
     if (e.type === 'slime' && e.st === 'hop') { sxk = 0.85; syk = 1.2; }
     const w = 16 * scale * sxk, h = 16 * scale * syk;
@@ -377,8 +435,10 @@ export class Renderer {
     if (e.spawnT > 0) { alpha = 1 - e.spawnT / 0.7; rise = e.spawnT * 10; }
     x.globalAlpha = Math.max(0, alpha);
     const gy = e.type === 'gnat' ? Math.sin(t * 9 + e.id) * 2 - 4 : 0;
+    if (e.elite) { if (!this.gold) this.gold = new WeakMap(); let g = this.gold.get(s.c); if (!g) { g = whiteOf(s.c, '#f2d15c'); this.gold.set(s.c, g); } for (const [ox, oy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) x.drawImage(g, Math.round(e.x - w / 2) + ox, Math.round(e.y - h + 6 * scale - (e.z || 0) + rise + gy) + oy, Math.round(w), Math.round(h)); }
     x.drawImage(img, Math.round(e.x - w / 2), Math.round(e.y - h + 6 * scale - (e.z || 0) + rise + gy), Math.round(w), Math.round(h));
     x.globalAlpha = 1;
+    if (e.elite) x.drawImage(SPR.crown.c, Math.round(e.x - 3), Math.round(e.y - h + 2 - (e.z || 0) + gy + Math.sin(t * 4) * 1.5));
     if (e.burn) { x.fillStyle = (t * 10) % 2 < 1 ? '#e8873a' : '#f2d15c'; x.fillRect(Math.round(e.x - 1), Math.round(e.y - 14 - (e.z || 0)), 2, 3); }
     if (e.poison) { x.fillStyle = '#86b34e'; x.fillRect(Math.round(e.x + 4), Math.round(e.y - 12 + ((t * 8) % 4)), 1, 1); }
   }
@@ -483,11 +543,14 @@ export class Renderer {
     for (const p of this.parts) {
       p.life -= dt;
       if (p.zap) { x.fillStyle = '#c8f0ff'; for (let i = 1; i < p.zap.length; i++) { const [x0, y0] = p.zap[i - 1], [x1, y1] = p.zap[i]; for (let k = 0; k <= 1; k += 0.06) x.fillRect(Math.round(x0 + (x1 - x0) * k + rr(-2, 2)), Math.round(y0 + (y1 - y0) * k + rr(-2, 2)), 1, 1); } continue; }
+      if (p.pop) { x.fillStyle = '#ffffff'; const r = 7 * (1 - p.life / p.max) + 3; for (let j = -r; j <= r; j++) { const w = Math.round(Math.sqrt(Math.max(0, r * r - j * j))); x.fillRect(Math.round(p.x) - w, Math.round(p.y - 2 + j), w * 2, 1); } continue; }
       if (p.ring) { x.fillStyle = p.c; const r = p.r * (1 - p.life / p.max); for (let a = 0; a < 24; a++) { const ang = a / 24 * 6.28; x.fillRect(Math.round(p.x + Math.cos(ang) * r), Math.round(p.y + Math.sin(ang) * r * 0.75), 2, 1); } continue; }
       p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= Math.pow(0.02, dt); p.vy *= Math.pow(0.02, dt);
       x.fillStyle = p.c; x.fillRect(Math.round(p.x), Math.round(p.y), p.size, p.size);
     }
     this.parts = this.parts.filter(p => p.life > 0);
+    for (const f of this.floats) { f.life -= dt; f.y -= dt * (f.crit ? 26 : 20); if (f.life > 0) { const a = Math.min(1, f.life / f.max * 2); x.globalAlpha = a; text(x, f.txt, Math.round(f.x), Math.round(f.y), f.crit ? '#f2d15c' : '#f6ecd9', '#1b0d12', 'center'); if (f.crit) text(x, '!', Math.round(f.x) + 8, Math.round(f.y) - 2, '#f2d15c', '#1b0d12'); x.globalAlpha = 1; } }
+    this.floats = this.floats.filter(f => f.life > 0);
     if (this.parts.length > 600) this.parts.splice(0, this.parts.length - 600);
   }
 
@@ -514,10 +577,22 @@ export class Renderer {
     const p0 = view.players[0];
     if (p0) this.hearts(p0, 6, 3);
     x.drawImage(SPR.tooth.c, 96, 3); text(x, view.teeth, 106, 4);
+    const me = view.players[view.me] || view.players[0];
+    if (me) {
+      x.drawImage(SPR.bomb.c, 126, 1, 8, 8); text(x, me.bombs || 0, 136, 3);
+      if (me.active && SPR['a_' + me.active]) {
+        const A = ACTIVE[me.active], full = me.charge >= A.charge;
+        x.fillStyle = '#3a2410'; x.fillRect(148, 1, 14, 14);
+        if (!full || Math.floor(this.t * 4) % 2) x.drawImage(SPR['a_' + me.active].c, 149, 2);
+        x.fillStyle = '#1b0d12'; x.fillRect(164, 1, 4, 15);
+        const hgt = Math.round(13 * Math.min(1, me.charge / A.charge)); x.fillStyle = full ? '#f2d15c' : '#9ad8dc'; x.fillRect(165, 15 - hgt, 2, hgt);
+        if (full) text(x, 'Q', 170, 6, '#f2d15c');
+      }
+    }
     x.drawImage(SPR.marrow.c, 95, 12); text(x, view.marrow, 106, 12, '#e8873a');
-    text(x, F.plate + '  ' + F.name, 186, 4, '#e2d8bc', '#1b0d12', 'center');
+    text(x, F.plate + '  ' + F.name, 222, 4, '#e2d8bc', '#1b0d12', 'center');
     const m = Math.floor(view.time / 60), s = Math.floor(view.time % 60);
-    text(x, m + ':' + String(s).padStart(2, '0'), 186, 12, '#8a6a6a', null, 'center');
+    if (!view.coop) text(x, m + ':' + String(s).padStart(2, '0'), 222, 12, '#8a6a6a', null, 'center');
     const p1 = view.players[1];
     if (view.coop && p1) { if (p1.present) this.hearts(p1, W - 6, 3, true); else text(x, 'WAITING FOR P2', W - 6, 6, '#8a6a6a', null, 'right'); }
   }
@@ -536,7 +611,7 @@ export class Renderer {
       x.fillStyle = cur ? '#f6ecd9' : r.v ? '#a08878' : '#4a2a32';
       x.fillRect(px, py, cw, ch);
       if (r.ic) {
-        const icon = { boss: '#e0303e', treasure: '#f2d15c', shop: '#9ad8dc', feed: '#e58494' }[r.t];
+        const icon = r.el ? '#f2d15c' : r.ch ? '#f6ecd9' : { boss: '#e0303e', treasure: '#f2d15c', shop: '#9ad8dc', feed: '#e58494', secret: '#c79bd9' }[r.t];
         if (icon) { x.fillStyle = icon; x.fillRect(px + 2, py + 1, 2, 2); }
       }
     }
@@ -620,5 +695,75 @@ export class Renderer {
     for (const e of this.embers) { e.x += (e.vx + Math.sin(t + e.y * 0.05) * 4) * dt; e.y += e.vy * dt; e.life -= dt; x.fillStyle = e.life > 3 ? '#e8873a' : '#8a3a2a'; x.fillRect(Math.round(e.x), Math.round(e.y), 1, 1); }
     this.embers = this.embers.filter(e => e.life > 0 && e.y > 0);
     x.drawImage(this.vig, 0, 0);
+  }
+  // ---------- the prologue: about fifteen seconds of how the tower began
+  drawIntro(T, dt) {
+    this.t += dt;
+    if (!this.titleSky) this.drawTitle(0);
+    const x = this.x, ground = H - 22, ease = k => k < 0 ? 0 : k > 1 ? 1 : 1 - Math.pow(1 - k, 3);
+    x.drawImage(this.titleSky, 0, 0);
+    for (let i = 0; i < 40; i++) { const sx = (i * 73) % W, sy = (i * 37) % 90; if ((this.t * 0.7 + i * 0.13) % 3 < 2.6) { x.fillStyle = i % 5 ? '#6a4050' : '#d8bfa4'; x.fillRect(sx, sy, 1, 1); } }
+    // 0-3s: the tower grows out of the earth
+    const rise = ease(T / 3), shake = T < 3 ? Math.round(Math.sin(T * 50) * 1.5) : 0;
+    const breath = T > 3 ? Math.sin(T * 1.1) : 0, th = 176 + Math.round(breath * 2), tw = 112;
+    const tx = 82 - tw / 2 + shake, ty = ground - th + Math.round((1 - rise) * 190);
+    x.save(); x.beginPath(); x.rect(0, 0, W, ground); x.clip();
+    x.drawImage(this.titleTower, Math.round(tx), ty, tw, th);
+    x.restore();
+    if (T < 3.2) for (let i = 0; i < 3; i++) this.parts.push({ x: 82 + rr(-60, 60), y: ground, vx: rr(-30, 30), vy: rr(-40, -10), c: i ? '#3a1820' : '#5a3a40', life: 0.8, max: 0.8, size: 1 + (i === 0 ? 1 : 0) });
+    // 3-6s: it opens its eyes, one by one
+    const eyes = [[70, 40], [96, 64], [62, 96], [102, 122], [80, 140]];
+    eyes.forEach(([ex, ey], i) => {
+      ey += ty - (ground - 176);
+      const open = T - (3.2 + i * 0.45);
+      if (open < 0) { x.fillStyle = '#5a1d2a'; x.fillRect(ex - 3, ey, 7, 1); return; }
+      const h = Math.min(3, Math.floor(open * 10));
+      x.fillStyle = '#1b0d12'; x.fillRect(ex - 4, ey - 2, 9, 5);
+      x.fillStyle = '#f6ecd9'; x.fillRect(ex - 3, ey + 1 - Math.ceil(h / 2), 7, h);
+      if (h >= 3) { const look = T > 9 ? -2 : T > 6 ? 2 : 0; x.fillStyle = '#c02a3e'; x.fillRect(ex + look, ey - 1, 2, 3); }
+    });
+    // the mouth: shut until it is hungry, wide for the bird, chewing after
+    let mouth = 0;
+    if (T > 6 && T < 8.4) mouth = ease((T - 6) / 0.6);
+    if (T >= 8.4 && T < 9) mouth = Math.abs(Math.sin((T - 8.4) * 10)) * 0.6;
+    if (T >= 9 && T < 12) mouth = 0.8 + Math.sin(T * 2) * 0.1;
+    if (T >= 12) mouth = 0.35 + Math.abs(Math.sin(T * 3)) * 0.2;
+    if (rise > 0.98) {
+      const mh = Math.round(2 + mouth * 16), mxl = 60, mw = 44, myb = ground - 2;
+      x.fillStyle = '#0c0206'; x.fillRect(mxl, myb - mh, mw, mh);
+      x.fillStyle = '#c45a70'; x.fillRect(mxl - 2, myb - mh - 2, mw + 4, 2); x.fillRect(mxl - 2, myb, mw + 4, 2);
+      for (let i = 0; i < 6; i++) { x.fillStyle = '#f6ecd9'; x.fillRect(mxl + 2 + i * 7, myb - mh, 5, Math.min(4, mh)); x.fillRect(mxl + 5 + i * 7, myb - Math.min(4, mh), 4, Math.min(4, mh)); }
+      if (mouth > 0.5) { x.fillStyle = '#bcd04a'; for (let i = 0; i < 3; i++) x.fillRect(mxl + 6 + i * 15, Math.round(myb - mh + 4 + ((T * 30 + i * 7) % 12)), 1, 2); }
+    }
+    // 6-8.4s: a bird flies past and is swallowed
+    if (T > 5.8 && T < 8.4) {
+      const k = (T - 5.8) / 2.6, bx = W + 10 - k * (W - 72), by = 60 + Math.sin(k * 9) * 6 + Math.max(0, k - 0.55) * 230;
+      if (by < ground - 6) { const f = Math.floor(T * 10) % 2; x.fillStyle = '#1b0d12'; x.fillRect(Math.round(bx), Math.round(by), 3, 2); x.fillRect(Math.round(bx) - 2, Math.round(by) - (f ? 2 : -1), 2, 1); x.fillRect(Math.round(bx) + 3, Math.round(by) - (f ? 2 : -1), 2, 1); }
+    }
+    // 9-12s: villagers walk in after it, and none come back
+    const kinds = ['brick', 'mags', 'fang', 'hollow', 'wren'];
+    kinds.forEach((c, i) => {
+      const start = 9 + i * 0.5, k = (T - start) / 1.6;
+      if (k < 0 || k > 1) return;
+      const vx = -12 + k * 94, img = SPR['c_' + c + '_' + (Math.floor(T * 8) % 2 ? 'a' : 'b')];
+      if (img && vx < 76) x.drawImage(img.c, Math.round(vx), ground - 14, 12, 12);
+    });
+    // 12-15s: two more climbers arrive and look up
+    if (T > 12) {
+      const k = ease((T - 12) / 1.6);
+      const ax = W + 10 - k * (W - 128), bx = W + 26 - k * (W - 128);
+      const lookUp = T > 13.7, f = !lookUp && Math.floor(T * 8) % 2;
+      x.drawImage(SPR['c_wren_' + (lookUp ? 'u' : f ? 'b' : 'a')].c, Math.round(ax), ground - 16);
+      x.drawImage(SPR['c_pip_' + (lookUp ? 'u' : f ? 'a' : 'b')].c, Math.round(bx), ground - 14, 13, 13);
+      if (lookUp) { x.fillStyle = '#f2d15c'; x.fillRect(Math.round(ax) + 12, ground - 9, 2, 2); x.fillStyle = 'rgba(242,209,92,0.25)'; x.fillRect(Math.round(ax) + 8, ground - 13, 10, 10); }
+    }
+    // embers and dust
+    if (Math.random() < dt * 8) this.embers = (this.embers || []).concat([{ x: Math.random() * W, y: H, vx: (Math.random() - 0.5) * 6, vy: -8 - Math.random() * 14, life: 6 }]);
+    for (const e of this.embers || []) { e.x += e.vx * dt; e.y += e.vy * dt; e.life -= dt; x.fillStyle = '#e8873a'; x.fillRect(Math.round(e.x), Math.round(e.y), 1, 1); }
+    this.embers = (this.embers || []).filter(e => e.life > 0);
+    this.drawParts(dt);
+    x.drawImage(this.vig, 0, 0);
+    const fade = T < 0.8 ? 1 - T / 0.8 : T > 14.4 ? Math.min(1, (T - 14.4) / 0.6) : 0;
+    if (fade > 0) { x.fillStyle = `rgba(8,0,4,${fade})`; x.fillRect(0, 0, W, H); }
   }
 }
