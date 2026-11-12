@@ -166,7 +166,7 @@ function finishRun() {
   meta.stats.best = Math.max(meta.stats.best, game.fi + 1); meta.stats.kills += game.kills; if (won) meta.stats.wins++;
   saveMeta(); store.del(RUN);
   const res = { won, earned, fi: game.fi, kills: game.kills, time: game.time, bosses: game.bosses, items: game.players[0].items.length };
-  arcadeScore(game.score(), { floor: game.fi + 1, won });
+  arcadeScore(game.bosses, { floor: game.fi + 1, won, level: game.level });
   if (mode === 'host' && net) net.send({ t: 'end', ...res });
   sfx(won ? 'won' : 'dead'); setMusic(-1);
   setTimeout(() => endScreen(res), 1400);
