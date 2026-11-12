@@ -186,6 +186,11 @@ input#joinCode { font: inherit; font-family: 'IM Fell English SC', serif; font-s
 .sbdetail p { margin: 0; }
 .sbdetail .fl { font-style: italic; color: var(--faint); font-size: .9em; }
 .sbdetail .x { position: absolute; right: .3em; top: .1em; cursor: pointer; color: var(--faint); pointer-events: auto; background: none; border: 0; font: inherit; }
+.sbchips { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: .2em; margin: .1em 0 .2em; }
+.chip { pointer-events: auto; cursor: pointer; font: inherit; font-size: .82em; color: var(--ink); background: rgba(255,255,255,.3); border: 1px solid var(--faint); border-radius: 0; padding: .05em .45em; }
+.chip.on { background: var(--red); color: var(--paper); border-color: var(--red); }
+.sbdetail .tags { grid-column: 2; display: flex; flex-wrap: wrap; gap: .25em; margin-top: .15em; }
+.sbdetail .tags span { font-family: 'IM Fell English SC', serif; font-size: .78em; color: var(--red); border: 1px solid var(--red); padding: 0 .35em; }
 .sbinfo { margin: 0 0 .3em; font-style: italic; color: var(--faint); min-height: 1.2em; }
 .sbgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .25em; }
 .sbh { grid-column: 1 / -1; font-family: 'IM Fell English SC', serif; color: var(--faint); border-bottom: 1px dotted var(--faint); margin-top: .35em; }

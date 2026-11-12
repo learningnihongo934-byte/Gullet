@@ -411,3 +411,29 @@ export const TRAILS = [
 export const SKIN = Object.fromEntries(SKINS.map(x => [x.id, x]));
 export const HAT = Object.fromEntries(HATS.map(x => [x.id, x]));
 export const TRAIL = Object.fromEntries(TRAILS.map(x => [x.id, x]));
+
+// ---- card categories, worked out from what each card actually changes
+export const CARD_CATS = [
+  ['dmg', 'Damage', ['dmg', 'dmgMul', 'crit', 'critMul', 'rage', 'still', 'collector', 'finisher', 'opener', 'bossDmg', 'combo', 'piggy', 'big5']],
+  ['rate', 'Fire rate', ['fire']],
+  ['multi', 'Multi-shot', ['triple', 'twin', 'back', 'pinwheel', 'split', 'prism', 'wallBurst', 'deathBurst', 'dashBurst', 'hurtBurst']],
+  ['effect', 'Shot effects', ['burn', 'poison', 'slowHit', 'stun', 'chain', 'explode', 'bomb', 'splash', 'execute', 'hook', 'knock']],
+  ['shot', 'Shot behaviour', ['pierce', 'bounce', 'homing', 'boomer', 'grow', 'sizeUp', 'wiggle', 'accel', 'phase', 'shotSpeed', 'range', 'eraser']],
+  ['def', 'Defence', ['maxhp', 'shield', 'dodge', 'revive', 'vamp', 'leech', 'lvlHeal', 'clearHeal', 'healMul', 'thorns', 'hurtFreeze', 'biteproof', 'acidproof', 'flight', 'fragile', 'bossHp']],
+  ['move', 'Movement', ['speed', 'dashCD', 'dashSpeed', 'candle', 'dashReset', 'panic']],
+  ['help', 'Helpers', ['orbit', 'orbitDmg', 'buddy', 'aura', 'entryBlast']],
+  ['eco', 'Economy & luck', ['luck', 'discount', 'magnet', 'teethMul', 'teethDrop', 'capTeeth', 'interest', 'map', 'xpMul', 'choices', 'weaken', 'bossCut', 'slowAll', 'slowBullets']],
+];
+const tagCache = {};
+/** Category ids for a card, found by applying it to fresh stats and seeing what moved. */
+export function cardTags(id) {
+  if (tagCache[id]) return tagCache[id];
+  const it = ITEM[id], base = baseStats(), s = baseStats();
+  const fakeGame = { teeth: 0 };
+  try { it.apply(s, null, fakeGame); } catch { }
+  const moved = Object.keys(base).filter(k => s[k] !== base[k]);
+  const tags = CARD_CATS.filter(([, , keys]) => keys.some(k => moved.includes(k))).map(([c]) => c);
+  if (fakeGame.teeth && !tags.includes('eco')) tags.push('eco');
+  if ((id === 'dice' || id === 'jellybean') && !tags.includes('dmg')) tags.push('dmg', 'rate', 'move');
+  return (tagCache[id] = [...new Set(tags)]);
+}

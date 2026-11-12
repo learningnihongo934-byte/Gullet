@@ -1,5 +1,5 @@
 // Sandbox panel: spawn anything, paint the room, hand yourself any kit. Tab shows or hides it.
-import { ENEMIES, BOSSES, ITEMS, ITEM, WEAPONS, ACTIVES, ACTIVE, CHARS, FLOORS, OX, OY, TILE, W, H } from './data.js';
+import { ENEMIES, BOSSES, ITEMS, ITEM, WEAPONS, ACTIVES, ACTIVE, CHARS, FLOORS, OX, OY, TILE, W, H, CARD_CATS, cardTags } from './data.js';
 const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 import { SPR, climberSprite } from './sprites.js';
 
@@ -9,13 +9,14 @@ const PROPS = [['pod', 'Flesh pod'], ['bones', 'Bone pile'], ['sac', 'Bile sac']
 
 export function mountSandbox({ getGame, meta, saveMeta, sfx, toast, bossPics, canvas }) {
   const panel = $('#sandbox'), grid = $('#sbGrid'), info = $('#sbInfo');
-  let tab = 'spawn', tool = null, painting = false, speed = 1, infBombs = false;
+  let tab = 'spawn', tool = null, painting = false, speed = 1, infBombs = false, cat = '';
+  const catName = Object.fromEntries(CARD_CATS.map(([c, n]) => [c, n]));
   const urls = new Map();
   const url = c => { let u = urls.get(c); if (!u) { u = c.toDataURL(); urls.set(c, u); } return u; };
   // every button can carry details, shown on right-click, and is matched by the search box
   const detail = $('#sbDetail');
   const showDetail = (img, d) => {
-    detail.innerHTML = `${img ? `<img alt="" src="${img}">` : ''}<b>${esc(d.name)}</b><p>${esc(d.desc || '')}</p>${d.f ? `<p class="fl">${esc(d.f)}</p>` : ''}<button class="x" title="Close">×</button>`;
+    detail.innerHTML = `${img ? `<img alt="" src="${img}">` : ''}<b>${esc(d.name)}</b><p>${esc(d.desc || '')}</p>${d.f ? `<p class="fl">${esc(d.f)}</p>` : ''}${d.tags && d.tags.length ? `<p class="tags">${d.tags.map(t => `<span>${esc(catName[t])}</span>`).join('')}</p>` : ''}<button class="x" title="Close">×</button>`;
     detail.classList.remove('hidden');
     detail.querySelector('.x').onclick = () => detail.classList.add('hidden');
   };
@@ -23,6 +24,7 @@ export function mountSandbox({ getGame, meta, saveMeta, sfx, toast, bossPics, ca
     const b = document.createElement('button'); b.className = 'sbb' + (on ? ' on' : ''); b.title = d ? `${label}: ${d.desc || ''} (right-click for details)` : label;
     b.innerHTML = img ? `<img alt="" src="${img}"><span>${label}</span>` : `<span>${label}</span>`;
     b.dataset.s = (label + ' ' + (d ? (d.desc || '') + ' ' + (d.f || '') : '')).toLowerCase();
+    if (d && d.tags) b.dataset.tags = d.tags.join(' ');
     b.onclick = () => { onClick(b); sfx('pick'); };
     b.oncontextmenu = e => { e.preventDefault(); showDetail(img, d || { name: label }); };
     return b;
@@ -31,12 +33,12 @@ export function mountSandbox({ getGame, meta, saveMeta, sfx, toast, bossPics, ca
   const filter = () => {
     const q = search.value.trim().toLowerCase();
     let lastHead = null, any = false;
-    for (const el of grid.querySelectorAll('.sbh, .sbb, .sbcards')) {
-      if (el.classList.contains('sbcards')) continue;
+    for (const el of grid.querySelectorAll('.sbh, .sbb')) {
+      if (!el.dataset.s && el.classList.contains('sbb')) { el.style.display = ''; continue; }
       if (el.classList.contains('sbh')) { if (lastHead) lastHead.style.display = any || !q ? '' : 'none'; lastHead = el; any = false; continue; }
-      const hit = !q || el.dataset.s.includes(q); el.style.display = hit ? '' : 'none'; if (hit) any = true;
+      const hit = (!q || el.dataset.s.includes(q)) && (!cat || tab !== 'cards' || !el.dataset.tags || el.dataset.tags.split(' ').includes(cat)); el.style.display = hit ? '' : 'none'; if (hit) any = true;
     }
-    if (lastHead) lastHead.style.display = any || !q ? '' : 'none';
+    if (lastHead) lastHead.style.display = any || (!q && !cat) ? '' : 'none';
   };
   search.oninput = filter;
   const head = text => { const h = document.createElement('div'); h.className = 'sbh'; h.textContent = text; grid.appendChild(h); };
@@ -92,11 +94,20 @@ export function mountSandbox({ getGame, meta, saveMeta, sfx, toast, bossPics, ca
       grid.appendChild(btn(null, 'Charge active', () => { p.charge = 99; }));
     }
     if (tab === 'cards') {
+      const chips = document.createElement('div'); chips.className = 'sbchips';
+      const counts = {}; for (const it of ITEMS) for (const t of cardTags(it.id)) counts[t] = (counts[t] || 0) + 1;
+      for (const [c, n] of [['', 'All']].concat(CARD_CATS.map(([c, n]) => [c, n]))) {
+        const ch = document.createElement('button'); ch.className = 'chip' + (cat === c ? ' on' : '');
+        ch.textContent = c ? `${n} ${counts[c] || 0}` : `${n} ${ITEMS.length}`;
+        ch.onclick = () => { cat = c; chips.querySelectorAll('.chip').forEach(x => x.classList.toggle('on', x === ch)); filter(); };
+        chips.appendChild(ch);
+      }
+      grid.appendChild(chips);
       head(`Cards · left-click to keep one, right-click for details · you hold ${p.items.length}`);
       grid.appendChild(btn(null, 'Remove all cards', () => { p.items = []; g.sbRebuild(p, meta, p.weapon, p.char); render(); }));
       for (const it of ITEMS) {
         const n = p.items.filter(x => x === it.id).length;
-        const b = btn(url(SPR['i_' + it.id].c), `${it.name}${n ? ' ×' + n : ''}`, () => { g.giveItem(p, it.id); const m = p.items.filter(x => x === it.id).length; b.querySelector('span').textContent = `${it.name} ×${m}`; }, n > 0, { name: it.name, desc: it.desc, f: it.f });
+        const b = btn(url(SPR['i_' + it.id].c), `${it.name}${n ? ' ×' + n : ''}`, () => { g.giveItem(p, it.id); const m = p.items.filter(x => x === it.id).length; b.querySelector('span').textContent = `${it.name} ×${m}`; }, n > 0, { name: it.name, desc: it.desc, f: it.f, tags: cardTags(it.id) });
         grid.appendChild(b);
       }
     }
