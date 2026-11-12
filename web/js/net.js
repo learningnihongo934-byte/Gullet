@@ -58,7 +58,7 @@ export class Mirror {
     this.enemies = s.E.map(q => {
       seen.add(q.id);
       const e = prev.get(q.id) || { id: q.id, x: q.x, y: q.y };
-      Object.assign(e, { type: q.ty, r: q.r, flash: q.fl ? 0.05 : 0, hp: q.hp, max: q.mx, st: q.s, boss: !!q.b, spawnT: q.sp, z: q.z, segs: q.sg, pulse: q.pu, br: q.br, a: q.a, age: q.ag, small: !!q.sm, elite: !!q.el, under: !!q.u, hide: !!q.hd, segR: q.sr, beamLen: q.ln, t: q.t, burn: q.bu, poison: q.po });
+      Object.assign(e, { type: q.ty, r: q.r, flash: q.fl ? 0.05 : 0, hp: q.hp, max: q.mx, st: q.s, boss: !!q.b, spawnT: q.sp, z: q.z, segs: q.sg, pulse: q.pu, br: q.br, a: q.a, age: q.ag, small: !!q.sm, elite: !!q.el, champ: q.ch, ss: q.ss, faint: q.fa, under: !!q.u, hide: !!q.hd, segR: q.sr, beamLen: q.ln, t: q.t, burn: q.bu, poison: q.po });
       this.target.set(q.id, [q.x, q.y]);
       if (Math.hypot(e.x - q.x, e.y - q.y) > 40) { e.x = q.x; e.y = q.y; }
       return e;
@@ -67,6 +67,7 @@ export class Mirror {
     const B = [];
     for (let i = 0; i < s.B.length; i += 7) B.push({ x: s.B[i], y: s.B[i + 1], vx: s.B[i + 2], vy: s.B[i + 3], r: s.B[i + 4], k: s.B[i + 5], en: !!s.B[i + 6] });
     this.bullets = B;
+    this.props = (s.PR || []).map(a => ({ k: a[0], x: a[1], y: a[2], hp: a[3], t: a[4] }));
     this.pickups = s.K; this.hazards = s.H; this.valve = s.V; this.decoy = s.DC; this.npcSay = s.NS;
     if (this.room) this.room.waves = s.WV;
   }

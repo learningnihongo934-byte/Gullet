@@ -8,7 +8,7 @@ function run(g, sec) {
     for (const p of g.players) { p.inv = 5; p.st.dmg = 60; }
     g.update(1 / 60, g.players.map(bot(g))); g.events = [];
     for (const p of g.players) if (p.offer) g.choose(p.id, 0);
-    if (i === 30 * 60) for (const e of g.enemies.slice()) if (!e.boss) g.damage(e, 1e6, g.players[0]);
+    if (i >= 20 * 60 && i % 600 === 0) for (const e of g.enemies.slice()) if (!e.boss) g.damage(e, 1e6, g.players[0]);
     if (g.room.cleared && !g.enemies.length) return true;
   }
   return false;
@@ -16,7 +16,7 @@ function run(g, sec) {
 const g = new Game({ coop: true, endless: true, metas: [{ weapon: 'lance' }, { weapon: 'lamprey' }] });
 for (let fi = 0; fi < 14; fi++) {
   if (g.fi !== fi) throw new Error(`expected floor ${fi}, on ${g.fi}`);
-  for (const r of g.floor.rooms.filter(r => r.type === 'fight').slice(0, 2)) { g.enterRoom(r, null); if (!run(g, 45)) throw new Error(`stuck in ${FL(fi).name} room ${r.key}: ${g.enemies.map(e => e.type + ':' + e.st)}`); }
+  for (const r of g.floor.rooms.filter(r => r.type === 'fight').slice(0, 2)) { g.enterRoom(r, null); if (!run(g, 45)) throw new Error(`stuck in ${FL(fi).name} room ${r.key}: ${g.enemies.map(e => [e.type, e.st, Math.round(e.hp), e.spawnT.toFixed(1), e.ss, Math.round(e.z), e.dead].join(":"))} ambush=${g.ambush} roomT=${g.roomT.toFixed(1)}`); }
   g.enterRoom(g.floor.rooms.find(r => r.type === 'boss'), null);
   const t0 = g.time, boss = g.enemies.find(e => e.boss).type;
   if (!run(g, 150)) throw new Error(`organ ${boss} not stopped on ${FL(fi).name}`);

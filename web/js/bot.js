@@ -85,7 +85,15 @@ export function botInput(g, p) {
     // fight: hold a ring around the nearest threat, strafing
     const e = foes.reduce((a, b) => Math.hypot(a.x - p.x, a.y - p.y) < Math.hypot(b.x - p.x, b.y - p.y) ? a : b);
     const dx = e.x - p.x, dy = e.y - p.y, d = Math.hypot(dx, dy) || 1, R = e.boss ? 95 : Math.min(85, p.st.range * p.st.shotSpeed * 0.6);
-    const radial = Math.max(-1, Math.min(1, (d - R) / 40));
+    // no clear shot (lumps, teeth or props in the way): walk around to get one
+    let clear = true;
+    for (let k = 8; k < d - e.r; k += 6) { const sx = p.x + dx / d * k, sy = p.y - 4 + dy / d * k; if (g.bulletSolid(sx, sy + 4) || (g.props || []).some(q => !q.dead && q.k !== 'spikes' && Math.hypot(q.x - sx, q.y - 2 - sy) < 8)) { clear = false; break; } }
+    B.blockT = clear ? 0 : (B.blockT || 0) + dt;
+    if (B.blockT > 0.4) {
+      const path = tilePath(g, tileOf(p.x, p.y), tileOf(e.x, e.y));
+      if (path && path.length > 2) { const [nx, ny] = centre(...path[2]); const qx = nx - p.x, qy = ny - p.y, ql = Math.hypot(qx, qy) || 1; mx += qx / ql * 1.6; my += qy / ql * 1.6; }
+    }
+    const radial = B.blockT > 0.4 ? 0 : Math.max(-1, Math.min(1, (d - R) / 40));
     B.flipT -= dt; if (B.flipT <= 0) { B.flipT = 1.5 + Math.random() * 2; if (Math.random() < 0.35) B.orbit = -B.orbit; }
     mx += dx / d * radial - dy / d * B.orbit * 0.8; my += dy / d * radial + dx / d * B.orbit * 0.8;
     inp.ax = dx + (e.vx || 0) * d / 400; inp.ay = dy - 3 + (e.vy || 0) * d / 400;
@@ -98,7 +106,11 @@ export function botInput(g, p) {
     // room is clear: loot, maybe bomb a cracked wall, then head on
     const loot = g.pickups.filter(k => wantPickup(g, p, k)).sort((a, b) => Math.hypot(a.x - p.x, a.y - p.y) - Math.hypot(b.x - p.x, b.y - p.y))[0];
     const secret = Object.keys(g.room.secret || {}).find(d => !g.room.doors[d] && !B.bombDone[g.room.key + d]);
+    B.propT = (B.propRoom === g.room.key ? B.propT : 0) + dt; B.propRoom = g.room.key;
+    const prop = B.propT < 7 ? (g.props || []).filter(q => !q.dead && (q.k === 'pod' || q.k === 'bones')).sort((a, b) => Math.hypot(a.x - p.x, a.y - p.y) - Math.hypot(b.x - p.x, b.y - p.y))[0] : null;
+    if (prop && Math.hypot(prop.x - p.x, prop.y - p.y) < 130) { inp.ax = prop.x - p.x; inp.ay = prop.y - 2 - p.y; }
     if (loot) follow(...tileOf(loot.x, loot.y));
+    else if (prop) { if (Math.hypot(prop.x - p.x, prop.y - p.y) > 50) follow(...tileOf(prop.x, prop.y)); }
     else if (secret && p.bombs > 0) {
       const [tx, ty] = DOORS[secret], ix = tx + (secret === 'w' ? 1 : secret === 'e' ? -1 : 0), iy = ty + (secret === 'n' ? 1 : secret === 's' ? -1 : 0);
       const l = follow(ix, iy);
@@ -130,6 +142,13 @@ export function botInput(g, p) {
       if (l < r) { mx += ox / l * 2.5; my += oy / l * 2.5; if (h.k === 'tele' && h.t > h.life - 0.15) danger = true; }
     }
     if (h.k === 'line') { const lx = h.x2 - h.x, ly = h.y2 - h.y, ll = Math.hypot(lx, ly) || 1, px = p.x - h.x, py = p.y - h.y, off = (px * ly - py * lx) / ll; if (Math.abs(off) < 14 && px * lx + py * ly > 0) { mx += ly / ll * Math.sign(off || 1) * 2.5; my += -lx / ll * Math.sign(off || 1) * 2.5; } }
+  }
+  // stay off raised spikes and away from bile sacs while things are flying
+  for (const q of g.props || []) {
+    if (q.dead) continue;
+    const ox = p.x - q.x, oy = p.y - q.y, l = Math.hypot(ox, oy) || 1;
+    if (q.k === 'spikes' && (q.t % 2.4) > 1.3 && l < 16) { mx += ox / l * 3; my += oy / l * 3; }
+    if (q.k === 'sac' && foes.length && l < 26) { mx += ox / l * 1.5; my += oy / l * 1.5; }
   }
   // the walls bite and the acid burns: keep off both while fighting
   if (foes.length) {

@@ -311,6 +311,11 @@ const HAT_ART = {
   halo: ['.kkkkk.', 'ky...yk', '.kkkkk.'],
   crown: ['k.k.k.k', 'kykykyk', 'kyyryyk', 'kkkkkkk'],
 };
+const PROP_ART = {
+  pod: ['....kkkk....', '..kkpppPkk..', '.kppppppPPk.', '.kpppppppPk.', 'kppprpppppPk', 'kpprrrppppPk', 'kppprpppppPk', 'kpppppppPPPk', '.kPpppppPPk.', '.kPPPPPPPPk.', '..kkkkkkkk..'],
+  bones: ['.kk......kk.', 'kwwk....kwwk', '.kwwkkkkwwk.', '..kwwwwwwk..', '.kwWkwwkWwk.', 'kwwk.kk.kwwk', '.kk..kk..kk.', '...kkwwkk...', '..kwwWWwwk..', '...kkkkkk...'],
+  sac: ['....kkkk....', '..kkggggkk..', '.kgggeggggk.', '.kggegggggk.', 'kgggggggggGk', 'kgggggggggGk', 'kGgggggggGGk', '.kGGgggGGGk.', '..kkGGGGkk..', '....kkkk....'],
+};
 const CROWN = ['k.k.k.k', 'kykykyk', 'kyyryyk', 'kkkkkkk'];
 const CACHE = ['....kk....', '...kyyk...', '..kkkkkk..', '.knnnnnnk.', 'knnnynnnnk', 'kyyyyyyyyk', 'knnnynnnnk', 'knnnynnnnk', '.kNNyNNNk.', '..kkkkkk..'];
 const MARROW = ['.kk...kk.', 'kyokkkoyk', '.koooook.', 'kyokkkoyk', '.kk...kk.'];
@@ -363,6 +368,7 @@ export function buildSprites() {
   add('heart', paint(HEART, 7, 6)); add('heartE', paint(HEART_E, 7, 6));
   add('tooth', paint(TOOTH, 7, 7)); add('cache', paint(CACHE, 10, 10));
   for (const k in ACTIVE_ART) add('a_' + k, paint(ACTIVE_ART[k], 12, 12));
+  for (const k in PROP_ART) add('pr_' + k, paint(PROP_ART[k], 12, 12));
   add('bomb', paint(BOMB, 12, 12)); add('note', paint(NOTE, 12, 12)); add('tapewell', paint(TAPEWELL, 16, 18)); add('crown', paint(CROWN, 7, 4)); add('marrow', paint(MARROW, 9, 5));
 }
 

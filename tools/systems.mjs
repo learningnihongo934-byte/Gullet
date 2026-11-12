@@ -45,4 +45,29 @@ for (const c of CHARS) { const g = new Game({ coop: false, metas: [{ char: c.id 
   g.enterRoom(g.floor.rooms.find(r => r.type === 'shop'), 'n');
   ok(g.npcSay && g.npcSay.text, `Mr. Tapewell: "${g.npcSay && g.npcSay.text}"`);
 }
+// living rooms, champions, entrances
+{
+  const g = new Game({ coop: false, metas: [{}] }), p = g.players[0];
+  g.loadFloor(3);
+  const room = g.floor.rooms.find(r => r.type === 'fight' && r.props.some(q => q.k === 'sac'));
+  if (room) {
+    g.enterRoom(room, 'n'); g.enemies = []; g.ambush = false;
+    const sac = g.props.find(q => q.k === 'sac'); g.addEnemy('grub', sac.x + 10, sac.y, { spawnT: 0, hp: 5, max: 5 });
+    g.breakProp(sac, p); ok(sac.dead && g.enemies.every(e => e.dead || e.hp < 5), 'bile sac exploded and hurt the grub beside it');
+  }
+  let champs = 0, drops = 0, ambush = 0, digest = 0;
+  for (let i = 0; i < 40; i++) {
+    const t = new Game({ coop: false, metas: [{}] }); t.loadFloor(4);
+    for (const r of t.floor.rooms.filter(r => r.type === 'fight')) {
+      t.enterRoom(r, 'n'); if (t.ambush) ambush++; if (r.digest) digest++;
+      for (let k = 0; k < 90; k++) { t.players[0].inv = 9; t.update(1 / 60, [{}]); t.events = []; }
+      champs += t.enemies.filter(e => e.champ).length; drops += t.enemies.filter(e => e.ss === 'drop').length;
+    }
+  }
+  ok(champs > 0 && drops > 0 && ambush > 0 && digest > 0, `over 40 floors: ${champs} champions, ${drops} ceiling drops, ${ambush} ambushes, ${digest} digesting rooms`);
+  const t = new Game({ coop: false, metas: [{}] }); t.loadFloor(2);
+  const dr = t.floor.rooms.find(r => r.type === 'fight'); dr.digest = 1; t.enterRoom(dr, 'n');
+  for (let k = 0; k < 60 * 4; k++) { t.players[0].inv = 9; t.update(1 / 60, [{}]); t.events = []; }
+  ok(dr.tiles.join('').split('~').length > 6 || t.ambush, 'acid crept in from the walls');
+}
 console.log('all systems ok');

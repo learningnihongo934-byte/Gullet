@@ -175,6 +175,7 @@ export class Renderer {
     this.drawDoors(view, P);
     for (const h of view.hazards) this.drawHazard(h, P);
     if (view.valve) this.drawValve(view.valve);
+    for (const q of view.props || []) if (!q.dead) this.drawProp(q, view);
     for (const k of view.pickups) this.drawPickup(k, view);
     if (view.room.type === 'shop') this.drawShopkeeper(view);
     if (view.decoy) { const d = view.decoy, bob = Math.abs(Math.sin(this.t * 8)) * 3; this.shadow(d.x, d.y + 4, 5); x.drawImage(SPR.a_chicken.c, Math.round(d.x - 6), Math.round(d.y - 10 - bob)); }
@@ -337,6 +338,30 @@ export class Renderer {
     if (mv && step !== p._step) { p._step = step; if (!p.dashT) for (let i = 0; i < 2; i++) this.parts.push({ x: p.x + (Math.random() - 0.5) * 6, y: p.y + 3, vx: (Math.random() - 0.5) * 14, vy: -Math.random() * 8, c: 'rgba(200,170,160,0.55)', life: 0.3, max: 0.3, size: 1 }); }
     return c;
   }
+  drawProp(q, view) {
+    const x = this.x, t = this.t, X = Math.round(q.x), Y = Math.round(q.y);
+    if (q.k === 'spikes') {
+      const ph = (q.t || 0) % 2.4, up = ph > 1.8, warn = ph > 1.4 && !up;
+      x.fillStyle = '#3a1c24'; x.fillRect(X - 7, Y - 5, 14, 11); x.fillStyle = '#1b0d12'; x.fillRect(X - 6, Y - 4, 12, 9);
+      for (let i = 0; i < 3; i++) for (let j = 0; j < 2; j++) {
+        const sx = X - 5 + i * 4 + (warn ? Math.round(Math.sin(t * 60 + i)) : 0), sy = Y - 2 + j * 4;
+        if (up) { x.fillStyle = '#f6ecd9'; x.fillRect(sx, sy - 4, 2, 5); x.fillRect(sx, sy - 5, 1, 1); x.fillStyle = '#c9b8a0'; x.fillRect(sx + 1, sy - 3, 1, 4); }
+        else { x.fillStyle = warn ? '#c9b8a0' : '#5a3a40'; x.fillRect(sx, sy, 2, 1); }
+      }
+      return;
+    }
+    if (q.k === 'pore') {
+      const open = (q.cd ?? 1) < 0.5, r = open ? 5 : 3;
+      x.fillStyle = '#c45a70'; for (let j = -r - 2; j <= r + 2; j++) { const w = Math.round(Math.sqrt(Math.max(0, (r + 2) ** 2 - j * j))); x.fillRect(X - w, Y + Math.round(j * 0.7), w * 2, 1); }
+      x.fillStyle = '#0c0206'; for (let j = -r; j <= r; j++) { const w = Math.round(Math.sqrt(Math.max(0, r * r - j * j))); x.fillRect(X - w, Y + Math.round(j * 0.7), w * 2, 1); }
+      return;
+    }
+    this.shadow(X, Y + 5, 6);
+    const img = SPR['pr_' + q.k];
+    if (!img) return;
+    const pulse = q.k === 'sac' ? Math.round(Math.sin(t * 5 + X) * 0.6) : 0;
+    x.drawImage(q.flash > 0 ? this.white(img.c) : img.c, X - 6 - pulse, Y - 9 - pulse, 12 + pulse * 2, 12 + pulse * 2);
+  }
   drawCache(cx, cy) {
     const x = this.x, t = this.t;
     x.fillStyle = (t * 6) % 2 < 1 ? '#f2d15c' : '#e8873a';
@@ -363,6 +388,10 @@ export class Renderer {
       this.shadow(h.x, h.y + 4, 5);
       x.drawImage(img, Math.round(h.x - 6 * s2), Math.round(h.y - 10 * s2), Math.round(12 * s2), Math.round(12 * s2));
       x.fillStyle = (t * 18) % 2 < 1 ? '#f2d15c' : '#e8873a'; x.fillRect(Math.round(h.x + 1), Math.round(h.y - 11 - Math.random() * 2), 1, 1);
+    } else if (h.k === 'hole') {
+      const k = h.t / h.life, r = Math.max(0, Math.round(Math.sin(Math.min(1, k) * Math.PI) * 8));
+      x.fillStyle = '#c45a70'; for (let j = -r - 1; j <= r + 1; j++) { const w = Math.round(Math.sqrt(Math.max(0, (r + 1) ** 2 - j * j))); x.fillRect(Math.round(h.x) - w, Math.round(h.y + j * 0.6), w * 2, 1); }
+      x.fillStyle = '#0c0206'; for (let j = -r; j <= r; j++) { const w = Math.round(Math.sqrt(Math.max(0, r * r - j * j))); x.fillRect(Math.round(h.x) - w, Math.round(h.y + j * 0.6), w * 2, 1); }
     } else if (h.k === 'pull') {
       x.fillStyle = '#9aa0a8';
       for (let i = 0; i < 18; i++) { const a = i / 18 * Math.PI * 2 + t * 6, r = 40 * (1 - (h.t / h.life + i / 18) % 1); x.fillRect(Math.round(h.x + Math.cos(a) * r), Math.round(h.y + Math.sin(a) * r * 0.75), 1, 1); }
@@ -451,7 +480,7 @@ export class Renderer {
       x.fillStyle = FL(view.fi).pal.floor2; x.fillRect(Math.round(e.x - 4 + shake), Math.round(e.y), 8, 1);
       return;
     }
-    let scale = e.small ? 0.6 : e.elite ? 1.45 : 1;
+    let scale = e.small ? 0.6 : e.elite ? 1.45 : e.champ === 'giant' ? 1.35 : 1;
     let sxk = 1 + Math.sin(e.age * 7 + e.id) * 0.06, syk = 2 - sxk;
     if (e.flash > 0) { sxk = 1.18; syk = 0.84; }
     if (e.type === 'gnat') { sxk = 1; syk = 1; }
@@ -460,9 +489,11 @@ export class Renderer {
     let img = s.c;
     if (e.flash > 0 || (WIND.has(e.st) && Math.floor(t * 14) % 2)) img = s.wc;
     let alpha = 1, rise = 0;
-    if (e.spawnT > 0) { alpha = 1 - e.spawnT / 0.7; rise = e.spawnT * 10; }
+    if (e.spawnT > 0 && e.ss !== 'drop') { alpha = 1 - e.spawnT / (e.ss ? 0.9 : 0.7); rise = e.spawnT * 10; }
+    if (e.faint) alpha *= 0.2 + Math.abs(Math.sin(t * 9)) * 0.15;
     x.globalAlpha = Math.max(0, alpha);
     const gy = e.type === 'gnat' ? Math.sin(t * 9 + e.id) * 2 - 4 : 0;
+    if (e.champ && !e.elite) { const CC = { swift: '#9ad8dc', split: '#86b34e', armored: '#9aa0a8', volatile: '#e8873a', regen: '#e58494', ghostly: '#c79bd9', giant: '#ff3a5a' }; if (!this.tint) this.tint = new Map(); const key = e.champ + ':' + e.type; let g = this.tint.get(key); if (!g) { g = whiteOf(s.c, CC[e.champ]); this.tint.set(key, g); } const top = Math.round(e.y - h + 6 * scale - (e.z || 0) + rise + gy); for (const [ox, oy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) x.drawImage(g, Math.round(e.x - w / 2) + ox, top + oy, Math.round(w), Math.round(h)); }
     if (e.elite) { if (!this.gold) this.gold = new WeakMap(); let g = this.gold.get(s.c); if (!g) { g = whiteOf(s.c, '#f2d15c'); this.gold.set(s.c, g); } for (const [ox, oy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) x.drawImage(g, Math.round(e.x - w / 2) + ox, Math.round(e.y - h + 6 * scale - (e.z || 0) + rise + gy) + oy, Math.round(w), Math.round(h)); }
     x.drawImage(img, Math.round(e.x - w / 2), Math.round(e.y - h + 6 * scale - (e.z || 0) + rise + gy), Math.round(w), Math.round(h));
     x.globalAlpha = 1;
