@@ -95,7 +95,7 @@ function show(id) {
 function refreshTitle() {
   const run = store.get(RUN, null);
   $('#bContinue').classList.toggle('hidden', !run || !!run.coop);
-  const RN = ['i.', 'ii.', 'iii.', 'iv.', 'v.', 'vi.'];
+  const RN = ['i.', 'ii.', 'iii.', 'iv.', 'v.', 'vi.', 'vii.', 'viii.', 'ix.', 'x.', 'xi.', 'xii.'];
   [...document.querySelectorAll('#title .menu button:not(.hidden) i')].forEach((el, n) => { el.textContent = RN[n]; });
   const st = meta.stats;
   $('#contWhere').textContent = run && !run.coop ? `${run.endless ? 'Infinite, ' : ''}plate ${FL(run.fi).plate}, level ${run.level || 1}` : '';
