@@ -148,6 +148,7 @@ export class Renderer {
       case 'slam': P(e.x, e.y + 6, '#c9b8a0', 16, 90, 0.4); break;
       case 'revive': { const p = view.players[e.p]; if (p) P(p.x, p.y - 4, '#f6ecd9', 16, 60, 0.6); break; }
       case 'heal': P(e.x, e.y - 6, '#e58494', 8, 40, 0.5); break;
+      case 'wish': P(e.x, e.y - 4, '#f6ecd9', 24, 90, 0.7); P(e.x, e.y - 4, '#f2d15c', 12, 60, 0.6); break;
     }
   }
 
@@ -331,6 +332,7 @@ export class Renderer {
       if (p.face === 'l') { x.save(); x.scale(-1, 1); x.drawImage(s.c, -px - 16, py); x.restore(); } else x.drawImage(s.c, px, py);
     }
     if (p.shieldUp) { x.fillStyle = '#9ad8dc'; for (let a = 0; a < 12; a++) { const ang = a / 12 * Math.PI * 2 + t; x.fillRect(Math.round(p.x + Math.cos(ang) * 10), Math.round(p.y - 5 + Math.sin(ang) * 10), 1, 1); } }
+    if (p.st.aura) { x.fillStyle = 'rgba(200,230,150,0.55)'; for (let a = 0; a < 28; a++) { const ang = a / 28 * Math.PI * 2 - t * 0.8; if ((a + Math.floor(t * 6)) % 3) x.fillRect(Math.round(p.x + Math.cos(ang) * 26), Math.round(p.y - 2 + Math.sin(ang) * 20), 1, 1); } }
     const n = p.st.orbit || 0;
     for (let i = 0; i < n; i++) { const a = p.orbA + i * Math.PI * 2 / n, img = this.dot('s', 3.5); x.drawImage(img, Math.round(p.x + Math.cos(a) * 20 - img.width / 2), Math.round(p.y - 4 + Math.sin(a) * 20 - img.height / 2)); }
     if (view.coop) text(x, id === 0 ? '1' : '2', p.x, p.y - 21, id === 0 ? '#e58494' : '#9ad8dc', '#1b0d12', 'center');

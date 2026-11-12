@@ -46,7 +46,7 @@ export class Mirror {
       const fresh = !p;
       if (!p) p = this.players[i] = { id: i, st: {} };
       Object.assign(p, { hp: q.hp, inv: q.inv, down: !!q.dn, face: q.f, moving: !!q.mv, anim: q.an, dashT: q.da ? 0.1 : 0, present: !!q.pr, shieldUp: !!q.sh, orbA: q.oa, items: q.it, pend: q.pd, offer: q.of });
-      p.st.maxhp = q.mh; p.st.orbit = q.ob;
+      p.st.maxhp = q.mh; p.st.orbit = q.ob; p.st.aura = q.au;
       this.ptarget[i] = [q.x, q.y];
       if (fresh || Math.hypot(p.x - q.x, p.y - q.y) > 40) { p.x = q.x; p.y = q.y; }
     });

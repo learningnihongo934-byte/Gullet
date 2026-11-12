@@ -10,6 +10,7 @@ case "${1:-dev}" in
   test)
     for f in web/js/*.js src/*.js tools/*.mjs; do node --check "$f"; done
     node tools/smoke.mjs
+    node tools/items.mjs
     ;;
   deploy) npx -y wrangler@4 deploy ;;
   *) sed -n '2,5p' "$0"; exit 1 ;;

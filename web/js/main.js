@@ -124,7 +124,7 @@ function card(plate, name, note) {
 }
 
 // ---------- events from the sim (host + solo locally, guest via snapshots)
-const SFX = { shoot: 'shoot', hit: 'hit', die: 'die', hurt: 'hurt', pick: 'pick', item: 'item', buy: 'buy', door: 'door', clear: 'clear', dash: 'dash', tele: 'tele', spit: 'spit', zap: 'zap', boom: 'boom', boss: 'boss', bossdie: 'bossdie', slam: 'slam', beat: 'beat', bite: 'bite', shield: 'shield', inhale: 'inhale', blow: 'blow', feed: 'feed', floor: 'floor', revive: 'revive', toast: 'toast', heal: 'heal', bounce: 'bounce' };
+const SFX = { shoot: 'shoot', hit: 'hit', die: 'die', hurt: 'hurt', pick: 'pick', item: 'item', buy: 'buy', door: 'door', clear: 'clear', dash: 'dash', tele: 'tele', spit: 'spit', zap: 'zap', boom: 'boom', boss: 'boss', bossdie: 'bossdie', slam: 'slam', beat: 'beat', bite: 'bite', shield: 'shield', inhale: 'inhale', blow: 'blow', feed: 'feed', floor: 'floor', revive: 'revive', wish: 'revive', freeze: 'shield', popper: 'boom', toast: 'toast', heal: 'heal', bounce: 'bounce' };
 function handleEvents(view, evs) {
   for (const e of evs) {
     R.fx(view, e);
@@ -134,6 +134,7 @@ function handleEvents(view, evs) {
     if (e.k === 'boss') { card(e.plate, e.name, ''); setMusic(view.fi, true); }
     if (e.k === 'bossdie') { setMusic(view.fi, false); }
     if (e.k === 'floor') { const F = FLOORS[e.fi]; card(F.plate, F.name, F.note); setMusic(e.fi); }
+    if (e.k === 'wish') toast(`<div class="ds">${e.p === view.me ? 'The wishbone snapped. You got back up.' : 'Your partner\'s wishbone snapped.'}</div>`, 2200);
     if (e.k === 'levelup' && (view.enemyCount ?? view.enemies.length) > 0) toast(`<div class="ds">Level ${e.lv}. Pick a reward once the room is clear.</div>`, 1600);
     if (e.k === 'down' && view.coop) toast(`<div class="ds">${e.p === view.me ? 'You went down. Your partner has to clear the room.' : 'Your partner went down. Clear the room to bring them back.'}</div>`, 2600);
   }
