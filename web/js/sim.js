@@ -327,7 +327,7 @@ export class Game {
   }
 
   hurt(p, amt) {
-    if (p.inv > 0 || p.dashT > 0 || p.down || !p.present || this.state !== 'play' || this.god) return false;
+    if (p.inv > 0 || p.dashT > 0 || p.down || !p.present || this.state !== 'play' || this.god || this.noDamage) return false;
     if (p.shields > 0) { p.shields--; p.shieldUp = p.shields > 0; p.inv = 0.8; this.ev({ k: 'shield', p: p.id, x: p.x, y: p.y }); return true; }
     if (p.st.dodge && rnd() < Math.min(0.5, p.st.dodge)) { p.inv = 0.5; this.ev({ k: 'dodge', p: p.id, x: p.x, y: p.y }); return true; }
     p.streak = 0; p.roomHit = true;
@@ -412,6 +412,7 @@ export class Game {
   }
   damage(e, dmg, p, o = {}) {
     if (e.dead) return;
+    if (this.noDamage) return;
     if (!e.boss && ENEMIES[e.type].armor) dmg *= ENEMIES[e.type].armor;
     if (e.champ === 'armored') dmg *= 0.5;
     e.hp -= dmg; e.flash = 0.08;
@@ -422,7 +423,7 @@ export class Game {
     this.ev({ k: 'hit', x: e.x, y: e.y, c: e.boss ? '#e0607a' : ENEMIES[e.type].gore, crit: o.crit ? 1 : 0, d: Math.round(dmg * 10) / 10, q: o.quiet ? 1 : 0 });
     if (e.hp <= 0) this.kill(e, p);
   }
-  dot(e, amt, p) { if (e.dead) return; e.hp -= amt; if (e.hp <= 0) this.kill(e, p); }
+  dot(e, amt, p) { if (e.dead || this.noDamage) return; e.hp -= amt; if (e.hp <= 0) this.kill(e, p); }
   drop(kind, x, y, v = 1) { this.pickups.push({ kind, x: clamp(x, L + 6, Rx - 6), y: clamp(y, T + 6, By - 6), v }); }
   kill(e, p) {
     if (e.dead) return;
@@ -1214,7 +1215,7 @@ export class Game {
     for (const q of this.props) {
       if (q.dead || q.k === 'spikes') continue;
       if (Math.hypot(q.x - b.x, q.y - 2 - b.y) > 7 + b.r) continue;
-      q.hp -= 1; q.flash = 0.1; b.life = 0;
+      if (!this.noDamage) q.hp -= 1; q.flash = 0.1; b.life = 0;
       this.ev({ k: 'hit', x: q.x, y: q.y, c: q.k === 'bones' ? '#e8dcc0' : q.k === 'sac' ? '#bcd04a' : '#c45a70', d: 0 });
       if (q.hp <= 0) this.breakProp(q, this.players[b.pl]);
       return true;

@@ -179,6 +179,13 @@ input#joinCode { font: inherit; font-family: 'IM Fell English SC', serif; font-s
 .sbtop b { font-family: 'IM Fell English SC', serif; font-weight: 400; color: var(--red); font-size: 1.5em; }
 .sbtop span { font-style: italic; color: var(--faint); font-size: .8em; }
 #sandbox .tabs { gap: .6em; margin: .1em 0 .3em; }
+.sbsearchall { width: 100%; font: inherit; border: 0; border-bottom: 1px solid var(--ink); background: transparent; color: var(--ink); outline: none; pointer-events: auto; margin: .1em 0 .3em; }
+.sbdetail { display: grid; grid-template-columns: auto 1fr; gap: 0 .5em; align-items: start; border: 1px solid var(--red); background: rgba(255,255,255,.55); padding: .3em .45em; margin-bottom: .35em; position: relative; }
+.sbdetail img { grid-row: 1 / span 3; width: calc(var(--s) * 14px); height: calc(var(--s) * 14px); object-fit: contain; image-rendering: pixelated; }
+.sbdetail b { font-family: 'IM Fell English SC', serif; font-weight: 400; color: var(--red); font-size: 1.15em; }
+.sbdetail p { margin: 0; }
+.sbdetail .fl { font-style: italic; color: var(--faint); font-size: .9em; }
+.sbdetail .x { position: absolute; right: .3em; top: .1em; cursor: pointer; color: var(--faint); pointer-events: auto; background: none; border: 0; font: inherit; }
 .sbinfo { margin: 0 0 .3em; font-style: italic; color: var(--faint); min-height: 1.2em; }
 .sbgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .25em; }
 .sbh { grid-column: 1 / -1; font-family: 'IM Fell English SC', serif; color: var(--faint); border-bottom: 1px dotted var(--faint); margin-top: .35em; }

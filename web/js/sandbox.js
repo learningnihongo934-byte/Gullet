@@ -1,5 +1,6 @@
 // Sandbox panel: spawn anything, paint the room, hand yourself any kit. Tab shows or hides it.
 import { ENEMIES, BOSSES, ITEMS, ITEM, WEAPONS, ACTIVES, ACTIVE, CHARS, FLOORS, OX, OY, TILE, W, H } from './data.js';
+const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 import { SPR, climberSprite } from './sprites.js';
 
 const $ = s => document.querySelector(s);
@@ -11,12 +12,33 @@ export function mountSandbox({ getGame, meta, saveMeta, sfx, toast, bossPics, ca
   let tab = 'spawn', tool = null, painting = false, speed = 1, infBombs = false;
   const urls = new Map();
   const url = c => { let u = urls.get(c); if (!u) { u = c.toDataURL(); urls.set(c, u); } return u; };
-  const btn = (img, label, onClick, on) => {
-    const b = document.createElement('button'); b.className = 'sbb' + (on ? ' on' : ''); b.title = label;
+  // every button can carry details, shown on right-click, and is matched by the search box
+  const detail = $('#sbDetail');
+  const showDetail = (img, d) => {
+    detail.innerHTML = `${img ? `<img alt="" src="${img}">` : ''}<b>${esc(d.name)}</b><p>${esc(d.desc || '')}</p>${d.f ? `<p class="fl">${esc(d.f)}</p>` : ''}<button class="x" title="Close">×</button>`;
+    detail.classList.remove('hidden');
+    detail.querySelector('.x').onclick = () => detail.classList.add('hidden');
+  };
+  const btn = (img, label, onClick, on, d) => {
+    const b = document.createElement('button'); b.className = 'sbb' + (on ? ' on' : ''); b.title = d ? `${label}: ${d.desc || ''} (right-click for details)` : label;
     b.innerHTML = img ? `<img alt="" src="${img}"><span>${label}</span>` : `<span>${label}</span>`;
+    b.dataset.s = (label + ' ' + (d ? (d.desc || '') + ' ' + (d.f || '') : '')).toLowerCase();
     b.onclick = () => { onClick(b); sfx('pick'); };
+    b.oncontextmenu = e => { e.preventDefault(); showDetail(img, d || { name: label }); };
     return b;
   };
+  const search = $('#sbSearch');
+  const filter = () => {
+    const q = search.value.trim().toLowerCase();
+    let lastHead = null, any = false;
+    for (const el of grid.querySelectorAll('.sbh, .sbb, .sbcards')) {
+      if (el.classList.contains('sbcards')) continue;
+      if (el.classList.contains('sbh')) { if (lastHead) lastHead.style.display = any || !q ? '' : 'none'; lastHead = el; any = false; continue; }
+      const hit = !q || el.dataset.s.includes(q); el.style.display = hit ? '' : 'none'; if (hit) any = true;
+    }
+    if (lastHead) lastHead.style.display = any || !q ? '' : 'none';
+  };
+  search.oninput = filter;
   const head = text => { const h = document.createElement('div'); h.className = 'sbh'; h.textContent = text; grid.appendChild(h); };
   const setTool = (t, label) => { tool = t; info.textContent = t ? `Click in the room: ${label}` : 'Mouse throws salt'; render(); };
 
@@ -25,15 +47,17 @@ export function mountSandbox({ getGame, meta, saveMeta, sfx, toast, bossPics, ca
     const p = g.players[0];
     document.querySelectorAll('#sbTabs button').forEach(b => b.classList.toggle('on', b.dataset.t === tab));
     grid.innerHTML = '';
+    queueMicrotask(filter);
     if (tab === 'spawn') {
       head('Monsters');
-      for (const [id, d] of Object.entries(ENEMIES)) grid.appendChild(btn(url(SPR[id].c), d.name, () => setTool({ k: 'spawn', id }, d.name), tool && tool.id === id));
+      for (const [id, d] of Object.entries(ENEMIES)) grid.appendChild(btn(url(SPR[id].c), d.name, () => setTool({ k: 'spawn', id }, d.name), tool && tool.id === id, { name: d.name, desc: d.lore, f: `${d.hp} health · ${d.fly ? 'flies' : 'walks'}${d.armor ? ' · armoured' : ''}` }));
       head('Organs');
       const BP = bossPics();
-      for (const [id, d] of Object.entries(BOSSES)) grid.appendChild(btn(url(BP[id]), d.name, () => setTool({ k: 'spawn', id }, d.name), tool && tool.id === id));
+      for (const [id, d] of Object.entries(BOSSES)) grid.appendChild(btn(url(BP[id]), d.name, () => setTool({ k: 'spawn', id }, d.name), tool && tool.id === id, { name: d.name, desc: d.lore, f: `Organ · ${d.hp} health` }));
       head('Room');
       grid.appendChild(btn(null, 'Clear enemies', () => g.sbClear('enemies')));
       grid.appendChild(btn(null, g.frozen ? 'Unfreeze AI' : 'Freeze AI', () => { g.frozen = !g.frozen; render(); }, g.frozen));
+      grid.appendChild(btn(null, g.noDamage ? 'Damage: frozen' : 'Freeze damage', () => { g.noDamage = !g.noDamage; render(); }, g.noDamage, { name: 'Freeze all damage', desc: 'While on, nothing takes damage: not you, not enemies, not organs, not props.' }));
     }
     if (tab === 'build') {
       head('Paint tiles (drag)');
@@ -54,11 +78,11 @@ export function mountSandbox({ getGame, meta, saveMeta, sfx, toast, bossPics, ca
     }
     if (tab === 'kit') {
       head('Weapon');
-      for (const w of WEAPONS) grid.appendChild(btn(url(SPR['w_' + w.id].c), w.name, () => { g.sbRebuild(p, meta, w.id, p.char); render(); }, p.weapon === w.id));
+      for (const w of WEAPONS) grid.appendChild(btn(url(SPR['w_' + w.id].c), w.name, () => { g.sbRebuild(p, meta, w.id, p.char); render(); }, p.weapon === w.id, { name: w.name, desc: w.desc, f: w.stats }));
       head('Climber');
-      for (const c of CHARS) grid.appendChild(btn(url(climberSprite(c, null, 'a').c), c.name, () => { g.sbRebuild(p, meta, p.weapon, c.id); render(); }, p.char === c.id));
+      for (const c of CHARS) grid.appendChild(btn(url(climberSprite(c, null, 'a').c), c.name, () => { g.sbRebuild(p, meta, p.weapon, c.id); render(); }, p.char === c.id, { name: c.name, desc: c.desc, f: c.quirk }));
       head('Active item');
-      for (const a of ACTIVES) grid.appendChild(btn(url(SPR['a_' + a.id].c), a.name, () => { p.active = a.id; p.charge = 99; render(); }, p.active === a.id));
+      for (const a of ACTIVES) grid.appendChild(btn(url(SPR['a_' + a.id].c), a.name, () => { p.active = a.id; p.charge = 99; render(); }, p.active === a.id, { name: a.name, desc: a.desc + ` (charges in ${a.charge} kills)`, f: a.f }));
       head('Supplies');
       grid.appendChild(btn(url(SPR.bomb.c), '+5 bombs', () => { p.bombs += 5; }));
       grid.appendChild(btn(url(SPR.tooth.c), '+50 teeth', () => { g.teeth += 50; }));
@@ -68,33 +92,25 @@ export function mountSandbox({ getGame, meta, saveMeta, sfx, toast, bossPics, ca
       grid.appendChild(btn(null, 'Charge active', () => { p.charge = 99; }));
     }
     if (tab === 'cards') {
-      const box = document.createElement('div'); box.className = 'sbsearch';
-      box.innerHTML = `<input id="sbFind" placeholder="Search 150 cards" autocomplete="off"><button class="sbb" id="sbStrip"><span>Remove all cards</span></button>`;
-      grid.appendChild(box);
-      const list = document.createElement('div'); list.className = 'sbcards'; grid.appendChild(list);
-      const fill = q => {
-        list.innerHTML = '';
-        for (const it of ITEMS) {
-          if (q && !(it.name + ' ' + it.desc).toLowerCase().includes(q)) continue;
-          const n = p.items.filter(x => x === it.id).length;
-          const b = btn(url(SPR['i_' + it.id].c), `${it.name}${n ? ' ×' + n : ''}`, () => { g.giveItem(p, it.id); fill($('#sbFind').value.toLowerCase()); });
-          b.title = `${it.name}: ${it.desc}`; list.appendChild(b);
-        }
-      };
-      fill('');
-      $('#sbFind').oninput = e => fill(e.target.value.toLowerCase());
-      $('#sbStrip').onclick = () => { p.items = []; g.sbRebuild(p, meta, p.weapon, p.char); fill(''); };
+      head(`Cards · left-click to keep one, right-click for details · you hold ${p.items.length}`);
+      grid.appendChild(btn(null, 'Remove all cards', () => { p.items = []; g.sbRebuild(p, meta, p.weapon, p.char); render(); }));
+      for (const it of ITEMS) {
+        const n = p.items.filter(x => x === it.id).length;
+        const b = btn(url(SPR['i_' + it.id].c), `${it.name}${n ? ' ×' + n : ''}`, () => { g.giveItem(p, it.id); const m = p.items.filter(x => x === it.id).length; b.querySelector('span').textContent = `${it.name} ×${m}`; }, n > 0, { name: it.name, desc: it.desc, f: it.f });
+        grid.appendChild(b);
+      }
     }
     if (tab === 'world') {
       head('Rules');
       grid.appendChild(btn(null, g.god ? 'God mode: on' : 'God mode: off', () => { g.god = !g.god; render(); }, g.god));
       grid.appendChild(btn(null, infBombs ? 'Infinite bombs: on' : 'Infinite bombs: off', () => { infBombs = !infBombs; render(); }, infBombs));
       grid.appendChild(btn(null, g.frozen ? 'Enemy AI: frozen' : 'Enemy AI: on', () => { g.frozen = !g.frozen; render(); }, g.frozen));
+      grid.appendChild(btn(null, g.noDamage ? 'All damage: frozen' : 'All damage: on', () => { g.noDamage = !g.noDamage; render(); }, g.noDamage, { name: 'Freeze all damage', desc: 'While on, nothing takes damage: not you, not enemies, not organs, not props.' }));
       head('Game speed');
       for (const s of [0.25, 0.5, 1, 2]) grid.appendChild(btn(null, s + '×', () => { speed = s; render(); }, speed === s));
     }
   }
-  document.querySelectorAll('#sbTabs button').forEach(b => b.onclick = () => { tab = b.dataset.t; render(); });
+  document.querySelectorAll('#sbTabs button').forEach(b => b.onclick = () => { tab = b.dataset.t; search.value = ''; detail.classList.add('hidden'); render(); });
 
   // placing things with the mouse
   const toRoom = e => { const r = canvas.getBoundingClientRect(); return [(e.clientX - r.left) / r.width * W, (e.clientY - r.top) / r.height * H]; };
