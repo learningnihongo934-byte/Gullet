@@ -75,6 +75,10 @@ input#joinCode { font: inherit; font-family: 'IM Fell English SC', serif; font-s
 .seal:hover { transform: rotate(-4deg) scale(1.06); }
 .seal.seen { opacity: .0; pointer-events: none; }
 .plate.side { overflow: visible; }
+.minor { display: flex; flex-wrap: wrap; gap: .15em .1em; margin-top: .6em; padding-top: .45em; border-top: 1px dotted var(--faint); }
+.minor button { pointer-events: auto; cursor: pointer; font: inherit; font-family: 'IM Fell English SC', serif; font-size: .92em; color: var(--ink); background: none; border: 0; padding: .05em .45em .05em 0; }
+.minor button:not(:last-child)::after { content: '·'; color: var(--faint); margin-left: .45em; }
+.minor button:hover, .minor button:focus-visible { color: var(--red); text-decoration: underline; text-underline-offset: .18em; outline: none; }
 .menu small { color: var(--faint); font-style: italic; font-size: .75em; margin-left: .4em; }
 .ledger { display: grid; grid-template-columns: repeat(5, 1fr); gap: .2em .6em; margin: .8em 0 0; border-top: 1px solid var(--faint); padding-top: .5em; text-align: center; }
 .ledger div { display: flex; flex-direction: column; }
