@@ -1,5 +1,5 @@
 // Gullet renderer. Draws a "view" (the host's Game, or the guest's mirror of it) at 320x196 pixels.
-import { TILE, RW, RH, OX, OY, W, H, CX, CY, FLOORS, BOSSES, ITEM } from './data.js';
+import { TILE, RW, RH, OX, OY, W, H, CX, CY, FLOORS, FL, BOSSES, ITEM } from './data.js';
 import { SPR, floorArt, bosses, text, whiteOf, blob } from './sprites.js';
 import { mulberry32 } from './gen.js';
 
@@ -18,7 +18,7 @@ function dotSprite(r, fill, edge, hi) {
   }
   return c;
 }
-const BCOL = { p: ['#e8603a', '#3a1008', '#ffb070'], g: ['#9a9284', '#2a2420', '#d8d0c0'], v: ['#d8e070', '#2a3010', '#ffffff'], w: ['#f6ecd9', '#3a2a1a', '#ffffff'], f: ['#f2a03a', '#3a1008', '#fff0a0'], s: ['#f6ecd9', '#5a4a52', '#ffffff'], S: ['#f6ecd9', '#5a4a52', '#ffffff'], b: ['#c8d44a', '#3a3a10', '#f0f4a0'], r: ['#d8304a', '#3a0810', '#ff9aa8'], n: ['#e8dcc0', '#3a2a1a', '#ffffff'] };
+const BCOL = { a: ['#86d04a', '#1a3010', '#d0ff90'], c: ['#6a4a2a', '#1a0c06', '#b48858'], h: ['#c8f0f0', '#2a4a50', '#ffffff'], m: ['#b07ad8', '#2a1040', '#e8c8ff'], H: ['#ff3a5a', '#3a0010', '#ffb0c0'], l: ['#ffffff', '#5a4a40', '#ffffff'], p: ['#e8603a', '#3a1008', '#ffb070'], g: ['#9a9284', '#2a2420', '#d8d0c0'], v: ['#d8e070', '#2a3010', '#ffffff'], w: ['#f6ecd9', '#3a2a1a', '#ffffff'], f: ['#f2a03a', '#3a1008', '#fff0a0'], s: ['#f6ecd9', '#5a4a52', '#ffffff'], S: ['#f6ecd9', '#5a4a52', '#ffffff'], b: ['#c8d44a', '#3a3a10', '#f0f4a0'], r: ['#d8304a', '#3a0810', '#ff9aa8'], n: ['#e8dcc0', '#3a2a1a', '#ffffff'] };
 
 export class Renderer {
   constructor(canvas) {
@@ -51,7 +51,7 @@ export class Renderer {
     const key = fi + ':' + room.key;
     let c = this.bg.get(key);
     if (c) return c;
-    const F = FLOORS[fi], P = F.pal, A = floorArt(fi, F), R = mulberry32(hash(key));
+    const F = FL(fi), P = F.pal, A = floorArt(F.part, F), R = mulberry32(hash(key));
     c = mk(RW * TILE, RH * TILE);
     const x = c.getContext('2d');
     const tiles = room.tiles, at = (tx, ty) => (tiles[ty] || '')[tx] || '#';
@@ -148,6 +148,7 @@ export class Renderer {
       case 'slam': P(e.x, e.y + 6, '#c9b8a0', 16, 90, 0.4); break;
       case 'revive': { const p = view.players[e.p]; if (p) P(p.x, p.y - 4, '#f6ecd9', 16, 60, 0.6); break; }
       case 'heal': P(e.x, e.y - 6, '#e58494', 8, 40, 0.5); break;
+      case 'healpulse': this.parts.push({ ring: 1, x: e.x, y: e.y, r: 75, life: 0.35, max: 0.35, c: '#86d04a' }); P(e.x, e.y, '#86d04a', 10, 50, 0.4); break;
       case 'wish': P(e.x, e.y - 4, '#f6ecd9', 24, 90, 0.7); P(e.x, e.y - 4, '#f2d15c', 12, 60, 0.6); break;
     }
   }
@@ -155,7 +156,7 @@ export class Renderer {
   // ---------- main draw
   draw(view, dt) {
     this.t += dt;
-    const x = this.x, F = FLOORS[view.fi], P = F.pal;
+    const x = this.x, F = FL(view.fi), P = F.pal;
     x.fillStyle = '#120408'; x.fillRect(0, 0, W, H);
     if (!view.room) return;
     const shk = view.shake || 0, sx = shk ? Math.round(rr(-shk, shk) * 0.5) : 0, sy = shk ? Math.round(rr(-shk, shk) * 0.5) : 0;
@@ -177,7 +178,8 @@ export class Renderer {
     for (const b of view.bullets) {
       const img = this.dot(b.k, b.r);
       if (!b.en && b.k !== 'n') this.shadow(b.x, b.y + 6, 2);
-      if (b.k === 'v' && !b.en) { const ph = Math.min(1, (b.t || 0) / 0.5); x.drawImage(img, Math.round(b.x - img.width / 2), Math.round(b.y - img.height / 2 - Math.sin(ph * Math.PI) * 10)); continue; }
+      if (b.k === 'l' && !b.en) { const sp = Math.hypot(b.vx, b.vy) || 1, ux = b.vx / sp, uy = b.vy / sp; for (let i = 0; i < 9; i++) { x.fillStyle = i < 2 ? '#ffffff' : i < 5 ? '#e8dcc0' : '#8a7a68'; x.fillRect(Math.round(b.x - ux * i), Math.round(b.y - uy * i), 2, 2); } continue; }
+      if ((b.k === 'v' || b.k === 'c') && !b.en) { const ph = Math.min(1, (b.t || 0) / 0.5); x.drawImage(img, Math.round(b.x - img.width / 2), Math.round(b.y - img.height / 2 - Math.sin(ph * Math.PI) * 10)); continue; }
       if (b.k === 'f' && Math.random() < 0.3) this.parts.push({ x: b.x, y: b.y, vx: 0, vy: -20, c: '#f2d15c', life: 0.15, max: 0.15, size: 1 });
       if (b.k === 'n' || b.k === 'w') { x.fillStyle = '#1b0d12'; x.fillRect(Math.round(b.x) - 2, Math.round(b.y) - 2, 5, 5); x.fillStyle = b.k === 'w' ? '#ffffff' : '#e8dcc0'; const a = (this.t * 12) % 2 < 1; x.fillRect(Math.round(b.x) - (a ? 2 : 0), Math.round(b.y) - (a ? 0 : 2), a ? 4 : 1, a ? 1 : 4); x.fillRect(Math.round(b.x) - (a ? 0 : 1), Math.round(b.y) - (a ? 1 : 0), a ? 1 : 3, a ? 3 : 1); }
       else x.drawImage(img, Math.round(b.x - img.width / 2), Math.round(b.y - img.height / 2));
@@ -288,6 +290,11 @@ export class Renderer {
     } else if (h.k === 'spike') {
       x.fillStyle = '#1b0d12'; x.fillRect(Math.round(h.x) - 4, Math.round(h.y) - 7, 9, 9);
       x.fillStyle = '#f6ecd9'; for (let i = 0; i < 7; i++) x.fillRect(Math.round(h.x) - Math.floor((7 - i) / 2), Math.round(h.y) - 6 + i, 7 - (6 - i) + 1 > 0 ? Math.max(1, i) : 1, 1);
+    } else if (h.k === 'epool') {
+      const r = h.r * Math.min(1, h.t / 0.4), a = Math.min(1, (h.life - h.t) * 2);
+      x.fillStyle = `rgba(150,190,40,${0.55 * a})`;
+      for (let j = -r; j <= r; j++) { const w = Math.round(Math.sqrt(Math.max(0, r * r - j * j))); x.fillRect(Math.round(h.x) - w, Math.round(h.y + j * 0.6), w * 2, 1); }
+      x.fillStyle = '#f0f4a0'; if ((t * 3 + h.x) % 1 < 0.5) x.fillRect(Math.round(h.x + Math.sin(h.x) * r * 0.5), Math.round(h.y), 1, 1);
     } else if (h.k === 'vin') {
       const a = 1 - h.t / h.life, r = h.r * Math.min(1, h.t * 6);
       x.fillStyle = `rgba(200,214,80,${0.25 + a * 0.3})`;
@@ -350,11 +357,13 @@ export class Renderer {
     const x = this.x, t = this.t;
     if (e.boss) return this.drawBoss(e, view);
     const s = SPR[e.type];
+    if (e.hide) { x.fillStyle = 'rgba(246,236,217,0.35)'; for (let i = 0; i < 5; i++) x.fillRect(Math.round(e.x + Math.sin(t * 7 + i * 1.3) * 5), Math.round(e.y - 4 + Math.cos(t * 5 + i * 2) * 4), 1, 1); return; }
+    if (e.type === 'molar' && e.st === 'sleep') { const bob = Math.round(Math.sin(t * 3 + e.x) * 1.5); this.shadow(e.x, e.y + 4, 3); x.drawImage(SPR.tooth.c, Math.round(e.x - 3), Math.round(e.y - 5 + bob)); return; }
     if (e.under) {
       const shake = e.st === 'rise' ? Math.round(Math.sin(t * 60)) : 0;
       x.fillStyle = '#2a0a12';
       for (let i = 0; i < 5; i++) x.fillRect(Math.round(e.x - 6 + i * 3 + shake), Math.round(e.y + 2 - (i % 2) - (e.st === 'rise' ? 2 : 0)), 3, 2);
-      x.fillStyle = FLOORS[view.fi].pal.floor2; x.fillRect(Math.round(e.x - 4 + shake), Math.round(e.y), 8, 1);
+      x.fillStyle = FL(view.fi).pal.floor2; x.fillRect(Math.round(e.x - 4 + shake), Math.round(e.y), 8, 1);
       return;
     }
     let scale = e.small ? 0.6 : 1;
@@ -410,6 +419,55 @@ export class Renderer {
         x.globalAlpha = 1;
         draw(B.marrow, e.x - 15, e.y - 26 + bob);
         x.drawImage(B.crown, Math.round(e.x - 5), Math.round(e.y - 31 + bob));
+        break;
+      }
+      case 'bileduke': {
+        const wob = 1 + Math.sin(e.age * 3) * 0.04, w = 54 * wob, h = 44 * (2 - wob);
+        draw(B.bileduke, e.x - w / 2, e.y + 14 - h, w, h);
+        x.drawImage(B.crownBile, Math.round(e.x - 4), Math.round(e.y + 10 - h));
+        break;
+      }
+      case 'twins': {
+        const b2 = (e.segs || [])[0];
+        if (b2) { x.save(); x.translate(Math.round(b2[0]), 0); x.scale(-1, 1); x.drawImage(flash ? this.white(B.kidney) : B.kidney, -13, Math.round(b2[1] - 16)); x.restore(); }
+        draw(B.kidney, e.x - 13, e.y - 16);
+        if (b2) { x.fillStyle = '#6a3424'; for (let k = 0; k <= 1; k += 0.1) x.fillRect(Math.round(e.x + (b2[0] - e.x) * k), Math.round(e.y + 4 + (b2[1] - e.y) * k + Math.sin(k * Math.PI) * 6), 2, 1); }
+        break;
+      }
+      case 'taster': {
+        const top = OY + 12, by = e.y - 14;
+        for (let y = top; y < by + 2; y++) { const k = (y - top) / (by - top), sx = CX + (e.x - CX) * k * k, w = 34 - k * 6; x.drawImage(B.tongueStalk, 0, 3, 36, 1, Math.round(sx - w / 2), y, Math.round(w), 1); }
+        draw(B.taster, e.x - 22, e.y - 17);
+        break;
+      }
+      case 'ganglion': {
+        const k = 1 + Math.sin(e.age * 6) * 0.04 + (e.st === 'lines' ? 0.08 : 0);
+        draw(B.ganglion, e.x - 23 * k, e.y - 23 * k, 46 * k, 46 * k);
+        x.fillStyle = '#c8e8ff'; for (let i = 0; i < 4; i++) { const a = t * 3 + i * 1.6, r = 18 + Math.sin(t * 9 + i) * 4; x.fillRect(Math.round(e.x + Math.cos(a) * r), Math.round(e.y + Math.sin(a) * r), 1, 1); }
+        break;
+      }
+      case 'optic': {
+        if (e.st === 'beam') {
+          x.save(); x.beginPath(); x.rect(OX + TILE, OY + TILE, (RW - 2) * TILE, (RH - 2) * TILE); x.clip();
+          const cx = Math.cos(e.a), cy = Math.sin(e.a);
+          for (let d = 16; d < 420; d += 1) { const bx = Math.round(e.x + cx * d), by = Math.round(e.y + cy * d); x.fillStyle = '#d8304a'; x.fillRect(bx - 2, by - 2, 5, 5); }
+          for (let d = 16; d < 420; d += 1) { x.fillStyle = (d + Math.floor(t * 40)) % 6 < 3 ? '#ffffff' : '#ffb0c0'; x.fillRect(Math.round(e.x + cx * d), Math.round(e.y + cy * d), 1, 1); }
+          x.restore();
+        }
+        if (e.st === 'shut') { draw(B.lid, e.x - 24, e.y - 24); break; }
+        draw(B.optic, e.x - 24, e.y - 24);
+        let px = 0, py = 0; const tg = view.players.filter(p => p.present && !p.down)[0];
+        if (e.st === 'beam' || e.st === 'aim') { px = Math.cos(e.a) * 7; py = Math.sin(e.a) * 7; } else if (tg) { const l = Math.hypot(tg.x - e.x, tg.y - e.y) || 1; px = (tg.x - e.x) / l * 7; py = (tg.y - e.y) / l * 7; }
+        const ix = Math.round(e.x + px), iy = Math.round(e.y + py);
+        for (let j = -8; j <= 8; j++) for (let i = -8; i <= 8; i++) { const d = Math.hypot(i, j); if (d < 8.5) { x.fillStyle = d < 4 ? '#0c0206' : d < 7 ? (i + j < 0 ? '#4f86c6' : '#263e6e') : '#1b0d12'; x.fillRect(ix + i, iy + j, 1, 1); } }
+        x.fillStyle = '#ffffff'; x.fillRect(ix - 3, iy - 3, 2, 2);
+        break;
+      }
+      case 'mind': {
+        const bob = Math.sin(t * 2) * 2;
+        x.globalAlpha = e.st === 'tp' ? 0.4 + Math.sin(t * 30) * 0.2 : 1;
+        draw(B.mind, e.x - 28, e.y - 22 + bob);
+        x.globalAlpha = 1;
         break;
       }
       case 'heart': {

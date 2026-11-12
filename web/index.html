@@ -18,28 +18,40 @@
   <canvas id="cv" width="320" height="196"></canvas>
   <div id="ui">
     <section id="title" class="screen plate side">
-      <button id="seal" class="seal" title="What's new">New<b>1.4</b></button>
+      <button id="seal" class="seal" title="What's new">New<b>1.5</b></button>
       <div class="plate-head"><span>Plate 0</span><span>On the Climbing of a Hungry Tower</span></div>
       <h1>Gullet</h1>
       <p class="sub">The tower is alive, and it is hungry. Climb its throat, stomach, lungs, bowels and spine, keep what it swallowed, and stop its heart before it digests you.</p>
       <nav class="menu">
         <button id="bContinue" class="hidden"><i>i.</i> Continue the climb <small id="contWhere"></small></button>
         <button id="bNew"><i>ii.</i> New climb</button>
+        <button id="bInf"><i>ii.</i> Infinite climb <small>beyond the heart</small></button>
         <button id="bCoop"><i>iii.</i> Climb with a friend</button>
         <button id="bCamp"><i>iv.</i> Basecamp</button>
+        <button id="bIndex"><i>v.</i> Index</button>
         <button id="bHelp"><i>v.</i> Field notes</button>
         <button id="bLog"><i>vi.</i> Update log</button>
       </nav>
       <dl class="ledger" id="ledger"></dl>
-      <p class="foot"><span id="verLine">Version 1.4</span><span>Made by Virat Reddy Kaukuntla</span></p>
+      <p class="foot"><span id="verLine">Version 1.5</span><span>Made by Virat Reddy Kaukuntla</span></p>
     </section>
 
     <section id="arm" class="screen plate wide hidden">
       <div class="plate-head"><span>Plate 0d</span><span>What the Climber Carries</span></div>
-      <h2>Choose your weapon</h2>
+      <h2 id="armTitle">Choose your weapon</h2>
       <p class="sub">Every card you keep builds on top of it. Your pick is remembered for next time.</p>
       <p class="status" id="armWarn"></p>
       <div id="weapons" class="weapons"></div>
+      <nav class="menu"><button data-back><i>&larr;</i> Back</button></nav>
+    </section>
+
+    <section id="index" class="screen plate wide hidden">
+      <div class="plate-head"><span>Appendix</span><span>An Index of the Tower and its Contents</span></div>
+      <h2>Index</h2>
+      <div class="tabs" role="tablist">
+        <button data-tab="cards" role="tab"></button><button data-tab="monsters" role="tab"></button><button data-tab="weapons" role="tab"></button>
+      </div>
+      <div class="ixwrap"><div id="ixGrid" class="ixgrid"></div><aside id="ixDetail" class="ixdetail"></aside></div>
       <nav class="menu"><button data-back><i>&larr;</i> Back</button></nav>
     </section>
 
@@ -62,6 +74,7 @@
           <p class="code" id="roomCode"></p>
           <p class="status" id="hostStatus"></p>
           <button id="bStartCoop" class="ink hidden">Start a new climb</button>
+          <button id="bInfCoop" class="ink hidden">Start an infinite climb</button>
           <button id="bContCoop" class="ink hidden">Continue our saved climb</button>
         </div>
         <div>
@@ -100,6 +113,8 @@
         <li>Wrapped caches are a free level. Shops sell them for teeth; feeding altars want one of your hearts.</li>
         <li>Each floor ends in an organ that fights back. Beat it and climb the rope up.</li>
         <li>In co-op, a fallen climber comes back when the room is cleared.</li>
+        <li>Infinite climbs go past the heart into the liver, kidneys, tongue, nerves, eye and brain, then loop around, harder each time.</li>
+        <li>Stopping each of the first six organs for the first time unlocks a new weapon.</li>
         <li>Save and quit any time. You'll pick up in the same room.</li>
       </ul>
       <nav class="menu"><button data-back><i>&larr;</i> Back</button></nav>

@@ -1,1 +1,21 @@
-{ "name": "gullet", "private": true, "type": "module" }
+{
+  "name": "gullet",
+  "version": "1.6.0",
+  "description": "Gullet: climb a hungry, living tower from the inside",
+  "main": "desktop/main.cjs",
+  "type": "module",
+  "private": true,
+  "scripts": { "start": "electron .", "dist": "electron-builder --mac --win" },
+  "author": "Virat Reddy Kaukuntla",
+  "license": "MIT",
+  "devDependencies": { "electron": "^45.0.0", "electron-builder": "^26.18.0" },
+  "build": {
+    "appId": "tech.rennko.gullet",
+    "productName": "Gullet",
+    "artifactName": "Gullet-${version}-${os}-${arch}.${ext}",
+    "files": ["desktop/**/*", "web/**/*", "package.json"],
+    "directories": { "buildResources": "desktop", "output": "dist" },
+    "mac": { "target": [{ "target": "dmg", "arch": ["arm64", "x64"] }], "category": "public.app-category.action-games", "icon": "desktop/icon.png" },
+    "win": { "target": [{ "target": "zip", "arch": ["x64"] }], "signAndEditExecutable": false, "icon": "desktop/icon.png" }
+  }
+}

@@ -1,6 +1,6 @@
 // Gullet simulation. One Game runs on the solo player's or the co-op host's machine; the guest only
 // sends inputs and draws snapshots. Everything here is plain data so a run can be saved mid-climb.
-import { TILE, RW, RH, OX, OY, CX, CY, DOORS, DIRS, OPP, FLOORS, ENEMIES, BOSSES, ITEMS, ITEM, statsFor, baseStats } from './data.js';
+import { TILE, RW, RH, OX, OY, CX, CY, DOORS, DIRS, OPP, FLOORS, ENEMIES, BOSSES, ITEMS, ITEM, statsFor, baseStats, FL, WEAPON } from './data.js';
 import { genFloor } from './gen.js';
 
 const rnd = Math.random, rr = (a, b) => a + rnd() * (b - a), pick = a => a[Math.floor(rnd() * a.length)];
@@ -12,7 +12,7 @@ let NID = 1;
 
 export class Game {
   constructor(o) {
-    this.coop = !!o.coop;
+    this.coop = !!o.coop; this.endless = !!o.endless;
     this.events = []; this.enemies = []; this.bullets = []; this.pickups = []; this.hazards = [];
     this.state = 'play'; this.shake = 0; this.roomT = 0; this.wantSave = false; this.roomChanged = true;
     this.valve = null; this.biteT = 4; this.winT = 0;
@@ -40,6 +40,7 @@ export class Game {
       fireT: 0, dashT: 0, dashCd: 0, dx: 0, dy: 0, inv: 0, down: false, present: true, shieldUp: false, orbA: 0, shots: 0, trailT: 0, anim: 0, pend: 0, offer: null, shields: 0, revives: st.revive || 0, weapon: 'salt', streak: 0, roomHit: false, budT: 0 };
   }
   load(s) {
+    this.endless = !!s.endless;
     Object.assign(this, { seed: s.seed, fi: s.fi, time: s.time, kills: s.kills, bosses: s.bosses, marrow: s.marrow, teeth: s.teeth, pool: s.pool, floor: s.floor, xp: s.xp || 0, level: s.level || 1 });
     this.players = s.players.map((q, i) => { const p = this.makePlayer(i, Object.assign(baseStats(), q.st)); p.items = q.items; p.hp = q.hp; p.present = i === 0; p.pend = q.pend || 0; p.offer = q.offer || null; p.revives = q.revives ?? p.st.revive; p.weapon = q.weapon || 'salt'; p.streak = q.streak || 0; return p; });
     if (this.coop && this.players.length < 2) this.players.push(Object.assign(this.makePlayer(1, statsFor({})), { present: false }));
@@ -51,7 +52,7 @@ export class Game {
     const floor = JSON.parse(JSON.stringify(this.floor));
     const fr = floor.rooms.find(r => r.key === room.key);
     fr.drops = drops;
-    return { v: 1, coop: this.coop, seed: this.seed, fi: this.fi, time: this.time, kills: this.kills, bosses: this.bosses, marrow: this.marrow,
+    return { v: 1, coop: this.coop, endless: this.endless, seed: this.seed, fi: this.fi, time: this.time, kills: this.kills, bosses: this.bosses, marrow: this.marrow,
       teeth: this.teeth, pool: this.pool, floor, cur: room.key, xp: this.xp, level: this.level, players: this.players.map(p => ({ st: p.st, items: p.items, hp: Math.max(1, p.hp), pend: p.pend, offer: p.offer, revives: p.revives, weapon: p.weapon, streak: p.streak })) };
   }
   drawItem() {
@@ -76,6 +77,8 @@ export class Game {
     this.room = this.floor.rooms.find(r => r.type === 'start');
   }
   ev(e) { this.events.push(e); }
+  tier() { return Math.floor(this.fi / 12); }
+  hasNext() { return this.endless || this.fi < 5; }
   get map() { return this.mapData(); }
 
   // ---------- levels: kills feed XP; every level, each climber picks 1 of 3 swallowed things once the room is safe
@@ -132,7 +135,7 @@ export class Game {
     });
     if ((room.type === 'treasure' || room.type === 'feed') && room.item) this.pickups.push({ kind: 'cache', x: CX, y: CY, ped: true, price: room.type === 'feed' ? 'heart' : 0 });
     if (room.type === 'shop') this.stockShop();
-    this.valve = room.type === 'boss' && room.cleared && this.fi < 5 ? { x: CX, y: CY - 14 } : null;
+    this.valve = room.type === 'boss' && room.cleared && this.hasNext() ? { x: CX, y: CY - 14 } : null;
     if (!room.cleared) { if (room.type === 'boss') this.spawnBoss(); else this.spawnEnemies(); }
     this.blastPending = !room.cleared && this.players.some(p => p.present && p.st.entryBlast);
     this.roomT = 0; this.roomChanged = true; this.wantSave = true; this.biteT = rr(3, 5);
@@ -289,10 +292,14 @@ export class Game {
       const a = a0 + da, px = -Math.sin(a) * off, py = Math.cos(a) * off;
       const x0 = p.x + Math.cos(a) * 5 + px, y0 = p.y - 4 + Math.sin(a) * 5 + py, w = p.weapon;
       if (w === 'pepper') { for (let k = 0; k < 5; k++) this.pbullet(p, x0, y0, a + (k - 2) * 0.16 + rr(-0.05, 0.05), st.shotSpeed * rr(0.85, 1.15), dmg * 0.26, { carry: 1, r: big ? 3.5 : 2, k: 'p', bomb: bomb && k === 2 }); continue; }
-      const K = { sling: 'g', vinegar: 'v', boomerang: 'w', matches: 'f' }[w] || (big ? 'S' : 's');
-      const R = { sling: 3.5, vinegar: 3, boomerang: 3.5, matches: 2 }[w] || 2.5;
+      if (w === 'horn') { for (let k = 0; k < 7; k++) { const hb = this.pbullet(p, x0, y0, a + (k - 3) * 0.16, st.shotSpeed * 0.9, dmg * 0.32, { carry: 1, r: 3, k: 'h', bomb: bomb && k === 3 }); hb.kb = 2.5; } continue; }
+      if (w === 'lamprey') { for (const sg of [1, -1]) { const lb = this.pbullet(p, x0, y0, a - sg * 0.6, st.shotSpeed * 0.75, dmg * 0.6, { carry: 1, r: 2.5, k: 'm', bomb }); lb.spin = sg * 3.4; } continue; }
+      const K = { sling: 'g', vinegar: 'v', boomerang: 'w', matches: 'f', acid: 'a', cannon: 'c', lance: 'l', heartstring: 'H' }[w] || (big ? 'S' : 's');
+      const R = { sling: 3.5, vinegar: 3, boomerang: 3.5, matches: 2, acid: 3, cannon: 4.5, lance: 2 }[w] || 2.5;
       const b = this.pbullet(p, x0, y0, a, st.shotSpeed, dmg, { carry: 1, r: big ? R + 2.5 : R, k: K, prism: st.prism && !big, bomb });
       if (w === 'vinegar') { b.lob = 1; b.life = b.max = 0.42 + st.range * 0.25; }
+      if (w === 'cannon') { b.lob = 2; b.life = b.max = 0.5 + st.range * 0.25; }
+      if (w === 'acid') b.psn = 1;
     }
     this.ev({ k: 'shoot', p: p.id });
   }
@@ -318,12 +325,15 @@ export class Game {
     const hp = d.hp * (1 + 0.32 * this.fi) * (this.twoPlayers() ? 1.4 : 1) * (1 - Math.min(0.4, Math.max(0, ...this.players.filter(q => q.present).map(q => q.st.weaken))));
     const e = { id: NID++, type, x, y, r: d.r, hp, max: hp, fly: !!d.fly, st: 'idle', t: rr(0.6, 1.6), age: rnd() * 5, spawnT: 0.7, flash: 0, kx: 0, ky: 0, vx: 0, vy: 0, z: 0, ...extra };
     if (type === 'burrower') { e.st = 'under'; e.under = 1; }
+    if (d.ai === 'wallcrawler') { e.pp = rnd() * this.perim(); e.dir = rnd() < 0.5 ? 1 : -1; [e.x, e.y] = this.perimPt(e.pp); }
+    if (d.ai === 'teleport' || d.ai === 'ghost') e.gt = rnd() * 2;
+    if (d.ai === 'mimic') e.spawnT = 0;
     this.enemies.push(e);
     return e;
   }
   spawnEnemies() {
-    const F = FLOORS[this.fi];
-    let budget = 3 + this.fi * 0.9 + rnd() * 2.5;
+    const F = FL(this.fi);
+    let budget = 3 + Math.min(this.fi, 14) * 0.9 + this.tier() * 1.5 + rnd() * 2.5;
     if (this.twoPlayers()) budget *= 1.3;
     const spots = [];
     for (let ty = 1; ty < RH - 1; ty++) for (let tx = 1; tx < RW - 1; tx++) {
@@ -333,21 +343,24 @@ export class Game {
       spots.push({ x, y });
     }
     while (budget > 0.5 && spots.length) {
-      const type = pick(F.enemies);
-      budget -= ENEMIES[type].cost;
+      const type = pick(F.enemies), d = ENEMIES[type];
+      budget -= d.cost;
       const s = spots.splice(Math.floor(rnd() * spots.length), 1)[0];
-      this.addEnemy(type, s.x + rr(-3, 3), s.y + rr(-3, 3));
+      for (let g = 0; g < (d.group || 1); g++) this.addEnemy(type, s.x + rr(-3, 3) + (g ? rr(-10, 10) : 0), s.y + rr(-3, 3) + (g ? rr(-10, 10) : 0));
     }
   }
   spawnBoss() {
-    const F = FLOORS[this.fi], type = F.boss, d = BOSSES[type];
-    const hp = d.hp * (this.twoPlayers() ? 1.5 : 1) * (1 - Math.min(0.3, Math.max(0, ...this.players.filter(q => q.present).map(q => q.st.bossCut))));
+    const F = FL(this.fi), type = F.boss, d = BOSSES[type];
+    const hp = d.hp * (1 + 0.6 * this.tier()) * (this.twoPlayers() ? 1.5 : 1) * (1 - Math.min(0.3, Math.max(0, ...this.players.filter(q => q.present).map(q => q.st.bossCut))));
     const e = { id: NID++, type, boss: 1, x: CX, y: CY - 10, r: d.r, hp, max: hp, st: 'intro', t: 1.8, age: 0, spawnT: 0, flash: 0, kx: 0, ky: 0, z: 0, a: 0 };
     if (type === 'dangler') e.y = OY + 54;
     if (type === 'coil') { e.y = OY + 40; e.a = Math.PI / 2; e.trail = []; e.segs = []; }
     if (type === 'heart') e.y = CY - 4;
     if (type === 'bellows') e.y = CY - 8;
     if (type === 'marrow') e.y = CY - 22;
+    if (type === 'taster') e.y = OY + 60;
+    if (type === 'twins') { e.cx = CX; e.cy = CY - 10; e.segs = [[CX + 26, CY - 10]]; e.segR = 12; }
+    if (type === 'optic' || type === 'ganglion') e.y = CY - 6;
     this.enemies.push(e);
     this.ev({ k: 'boss', name: d.name, plate: F.plate });
   }
@@ -358,10 +371,11 @@ export class Game {
   }
   damage(e, dmg, p, o = {}) {
     if (e.dead) return;
+    if (!e.boss && ENEMIES[e.type].armor) dmg *= ENEMIES[e.type].armor;
     e.hp -= dmg; e.flash = 0.08;
     if (!e.boss && (o.kx || o.ky)) {
       if (p && p.st.hook) { const qx = p.x - e.x, qy = p.y - e.y, l = Math.hypot(qx, qy) || 1; e.kx = qx / l * 90 * p.st.hook; e.ky = qy / l * 90 * p.st.hook; }
-      else { const l = Math.hypot(o.kx, o.ky) || 1, k = p ? p.st.knock : 1; e.kx = o.kx / l * 70 * k; e.ky = o.ky / l * 70 * k; }
+      else { const l = Math.hypot(o.kx, o.ky) || 1, k = (p ? p.st.knock : 1) * (o.kb || 1); e.kx = o.kx / l * 70 * k; e.ky = o.ky / l * 70 * k; }
     }
     this.ev({ k: 'hit', x: e.x, y: e.y, c: e.boss ? '#e0607a' : ENEMIES[e.type].gore, crit: o.crit ? 1 : 0 });
     if (e.hp <= 0) this.kill(e, p);
@@ -373,7 +387,7 @@ export class Game {
     e.dead = true;
     if (e.boss) return this.bossDie(e);
     this.kills++;
-    this.ev({ k: 'die', x: e.x, y: e.y, c: ENEMIES[e.type].gore });
+    this.ev({ k: 'die', x: e.x, y: e.y, c: ENEMIES[e.type].gore, ty: e.type });
     if (!e.small) this.gainXp(ENEMIES[e.type].cost);
     const luck = this.luck();
     if (rnd() < 0.05 + luck * 0.015) this.drop('heart', e.x, e.y, 1);
@@ -386,11 +400,14 @@ export class Game {
       this.ev({ k: 'boom', x: e.x, y: e.y, r: 26 }); this.shake = Math.max(this.shake, 3);
       for (const o of this.enemies) if (!o.dead && o !== e && !o.under && Math.hypot(o.x - e.x, o.y - e.y) < 26 + o.r) this.damage(o, (3 + p.st.dmg * 0.8) * p.st.explode, p);
     }
+    const dd = ENEMIES[e.type];
+    if (dd.split && (e.gen || 0) < (dd.gens || 1)) for (let i = 0; i < dd.split; i++) { const a = i * TAU / dd.split + rnd(); this.addEnemy(e.type, e.x + Math.cos(a) * 6, e.y + Math.sin(a) * 6, { small: 1, gen: (e.gen || 0) + 1, r: e.r * 0.72, hp: e.max * 0.4, max: e.max * 0.4, spawnT: 0, t: 0.4 }); }
+    if (dd.ai === 'bomber' && !e.exploded) this.ring(e, 6, 70, rnd() * 6, 'b');
     if (e.type === 'slime' && !e.small) for (const s of [-1, 1]) this.addEnemy('slime', e.x + s * 6, e.y, { small: 1, r: 4.5, hp: e.max * 0.35, max: e.max * 0.35, spawnT: 0, t: 0.4 });
   }
   bossDie(e) {
     this.bosses++;
-    this.ev({ k: 'bossdie', x: e.x, y: e.y }); this.shake = 12;
+    this.ev({ k: 'bossdie', x: e.x, y: e.y, ty: e.type }); this.shake = 12;
     for (const o of this.enemies) o.dead = true;
     for (const p of this.players) if (p.present && p.st.bossHp) { p.st.maxhp += 2 * p.st.bossHp; p.hp += 2 * p.st.bossHp; }
     this.bullets = this.bullets.filter(b => !b.en);
@@ -400,7 +417,7 @@ export class Game {
     this.drop('heart', CX - 30, CY + 20, 2);
     this.pickups.push({ kind: 'cache', x: CX, y: CY + 26 });
     this.gainXp(8 + this.fi * 3);
-    if (this.fi < 5) this.valve = { x: CX, y: CY - 14 }; else this.winT = 3.5;
+    if (this.hasNext()) this.valve = { x: CX, y: CY - 14 }; else this.winT = 3.5;
   }
 
   updateEnemies(dt) {
@@ -420,7 +437,7 @@ export class Game {
         for (const p of this.players) {
           if (!p.present || p.down) continue;
           if (Math.hypot(p.x - e.x, p.y - e.y) < e.r + p.r - 1) { this.hurt(p, 1); if (p.st.thorns && !(e.thornT > 0)) { e.thornT = 0.4; this.damage(e, (3 + p.st.dmg) * p.st.thorns, p); } }
-          if (e.segs) for (const s of e.segs) if (Math.hypot(p.x - s[0], p.y - s[1]) < 7 + p.r - 1) this.hurt(p, 1);
+          if (e.segs) for (const s of e.segs) if (Math.hypot(p.x - s[0], p.y - s[1]) < (e.segR || 7) + p.r - 1) this.hurt(p, 1);
         }
       }
     }
@@ -436,7 +453,7 @@ export class Game {
   }
 
   ebullet(x, y, a, speed, k = 'b', o = {}) {
-    speed *= 1 - Math.min(0.4, Math.max(...this.players.map(p => p.present ? p.st.slowBullets : 0)));
+    speed *= (1 + 0.08 * this.tier()) * (1 - Math.min(0.4, Math.max(...this.players.map(p => p.present ? p.st.slowBullets : 0))));
     this.bullets.push({ x, y, vx: Math.cos(a) * speed, vy: Math.sin(a) * speed, r: o.r || 3, life: o.life || 5, k, en: 1, curve: o.curve || 0, t: 0 });
   }
   fan(e, tgt, n, spread, speed, k) {
@@ -506,6 +523,7 @@ export class Game {
         else if (e.st === 'up') { if (e.t <= 0) { e.st = 'under'; e.under = 1; e.t = rr(1.8, 2.6); } }
         else { e.st = 'under'; e.under = 1; }
         break;
+      default: this.ai2(e, dt, tgt, slow, dist, ux, uy, dx, dy, d); break;
       case 'crawler': {
         e.zz = (e.zz || 0) - dt; if (e.zz <= 0) { e.zz = 0.4; e.zig = -(e.zig || 1); }
         const a = Math.atan2(uy, ux) + e.zig * 0.7;
@@ -518,7 +536,7 @@ export class Game {
 
   bossAI(e, dt, tgt) {
     e.t -= dt;
-    if (e.st === 'intro') { if (e.t <= 0) { e.st = 'idle'; e.t = 0.6; } if (e.type !== 'coil' && e.type !== 'dangler') return; }
+    if (e.st === 'intro') { if (e.t <= 0) { e.st = 'idle'; e.t = 0.6; } if (e.type !== 'coil' && e.type !== 'dangler' && e.type !== 'taster' && e.type !== 'twins') return; }
     if (!tgt) return;
     const ph = e.hp / e.max, fast = ph < 0.5, alive = this.alive();
     const dx = tgt.x - e.x, dy = tgt.y - e.y, dist = Math.hypot(dx, dy) || 1, ux = dx / dist, uy = dy / dist;
@@ -626,6 +644,7 @@ export class Game {
           e.st = 'idle'; e.t = fast ? 1.1 : 1.6;
         }
         break;
+      default: this.bossAI2(e, dt, tgt, ph, fast, alive, ux, uy, dx, dy); break;
       case 'heart': {
         e.pulse = Math.max(0, (e.pulse || 0) - dt * 3);
         const interval = ph < 0.25 ? 0.8 : ph < 0.6 ? 1.1 : 1.45;
@@ -642,6 +661,261 @@ export class Game {
         if (!e.s2 && ph < 0.25) { e.s2 = 1; this.addEnemy('antibody', CX - 70, CY - 30); this.addEnemy('antibody', CX + 70, CY - 30); this.addEnemy('leech', CX, By - 16); }
         break;
       }
+    }
+  }
+
+  // ---------- the 30 newer monsters share these behaviours (ENEMIES[type].ai)
+  perim() { return 2 * ((Rx - L - 20) + (By - T - 20)); }
+  perimPt(pp) {
+    const w = Rx - L - 20, h = By - T - 20, P = 2 * (w + h);
+    pp = ((pp % P) + P) % P;
+    if (pp < w) return [L + 10 + pp, T + 10];
+    if (pp < w + h) return [Rx - 10, T + 10 + pp - w];
+    if (pp < 2 * w + h) return [Rx - 10 - (pp - w - h), By - 10];
+    return [L + 10, By - 10 - (pp - 2 * w - h)];
+  }
+  freeSpot(x, y) {
+    for (let i = 0; i < 12; i++) { const px = clamp(x + rr(-20, 20) * i * 0.3, L + 10, Rx - 10), py = clamp(y + rr(-20, 20) * i * 0.3, T + 10, By - 10), c = this.tileAtPx(px, py); if (c === '.' || c === '~') return [px, py]; }
+    return [CX, CY];
+  }
+  ai2(e, dt, tgt, slow, dist, ux, uy, dx, dy, d) {
+    const sp = d.speed * slow * (1 + this.tier() * 0.1);
+    switch (d.ai) {
+      case 'swarm': {
+        e.vx += (ux * 230 + rr(-280, 280)) * dt; e.vy += (uy * 230 + rr(-280, 280)) * dt;
+        const v = Math.hypot(e.vx, e.vy); if (v > sp) { e.vx *= sp / v; e.vy *= sp / v; }
+        this.move(e, e.vx * dt, e.vy * dt, 'f'); break;
+      }
+      case 'mimic':
+        if (e.st === 'idle' || e.st === 'sleep') { e.st = 'sleep'; if (dist < 42 || e.hp < e.max) { e.st = 'wake'; e.t = 0.35; this.ev({ k: 'tele' }); } }
+        else if (e.st === 'wake') { if (e.t <= 0) { e.st = 'hop'; e.t = 0.32; e.lx = ux; e.ly = uy; } }
+        else if (e.st === 'hop') { this.move(e, e.lx * sp * dt, e.ly * sp * dt, 'e'); e.z = Math.sin((1 - Math.max(0, e.t) / 0.32) * Math.PI) * 6; if (e.t <= 0) { e.z = 0; e.st = 'land'; e.t = 0.3; } }
+        else if (e.st === 'land' && e.t <= 0) { e.st = 'hop'; e.t = 0.32; e.lx = ux; e.ly = uy; }
+        break;
+      case 'bomber':
+        if (e.st === 'idle') { this.move(e, ux * sp * dt, uy * sp * dt, 'e'); if (dist < 30) { e.st = 'fuse'; e.t = 0.8; this.ev({ k: 'tele' }); } }
+        else if (e.st === 'fuse' && e.t <= 0) {
+          e.exploded = 1; this.ring(e, 10, 85, rnd() * 6, 'b'); this.ev({ k: 'boom', x: e.x, y: e.y, r: 28 }); this.shake = Math.max(this.shake, 4);
+          for (const p of this.alive()) if (Math.hypot(p.x - e.x, p.y - e.y) < 28) this.hurt(p, 1);
+          this.kill(e, null);
+        }
+        break;
+      case 'miner': {
+        e.vx += (ux * 60 + rr(-200, 200)) * dt; e.vy += (uy * 60 + rr(-200, 200)) * dt;
+        const v = Math.hypot(e.vx, e.vy); if (v > sp) { e.vx *= sp / v; e.vy *= sp / v; }
+        this.move(e, e.vx * dt, e.vy * dt, 'f');
+        e.q = (e.q ?? rr(1, 2)) - dt;
+        if (e.q <= 0) { e.q = rr(1.5, 2.3); this.hazards.push({ k: 'epool', x: e.x, y: e.y + 5, r: 9, t: 0, life: 4 }); }
+        break;
+      }
+      case 'spinner':
+        if (d.speed) this.move(e, ux * sp * dt, uy * sp * dt, 'e');
+        if (e.st === 'idle' && e.t <= 0) { e.st = 'wind'; e.t = 0.5; }
+        else if (e.st === 'wind' && e.t <= 0) { e.st = 'spin'; e.t = 1.6; e.a = e.a || rnd() * 6; }
+        else if (e.st === 'spin') {
+          e.q = (e.q || 0) - dt;
+          if (e.q <= 0) { e.q = 0.11; e.a += 0.5; this.ebullet(e.x, e.y, e.a, 62, 'b'); if (d.armor) this.ebullet(e.x, e.y, e.a + Math.PI, 62, 'b'); }
+          if (e.t <= 0) { e.st = 'idle'; e.t = rr(1.4, 2.2); }
+        }
+        break;
+      case 'sniper':
+        if (e.st === 'idle') {
+          const want = dist < 95 ? -1 : dist > 140 ? 1 : 0, side = Math.sin(e.age * 1.3) * 0.6;
+          this.move(e, (ux * want - uy * side) * sp * dt, (uy * want + ux * side) * sp * dt, 'e');
+          if (e.t <= 0) { e.st = 'aim'; e.t = 0.9; e.lx = ux; e.ly = uy; this.hazards.push({ k: 'line', x: e.x, y: e.y, x2: e.x + ux * 400, y2: e.y + uy * 400, t: 0, life: 0.9 }); }
+        } else if (e.st === 'aim' && e.t <= 0) { this.ebullet(e.x, e.y, Math.atan2(e.ly, e.lx), 240, 'r', { r: 3 }); e.st = 'idle'; e.t = rr(2.2, 3); this.ev({ k: 'spit', x: e.x, y: e.y }); }
+        break;
+      case 'charger':
+        if (e.st === 'idle') { if (e.t <= 0) { e.st = 'wind'; e.t = 0.6; e.lx = ux; e.ly = uy; this.hazards.push({ k: 'line', x: e.x, y: e.y, x2: e.x + ux * 300, y2: e.y + uy * 300, t: 0, life: 0.6 }); } }
+        else if (e.st === 'wind' && e.t <= 0) { e.st = 'charge'; e.t = 1.6; e.bn = 3; }
+        else if (e.st === 'charge') {
+          const ox = e.x, oy = e.y, vx = e.lx * 200 * dt, vy = e.ly * 200 * dt;
+          this.move(e, vx, vy, 'e');
+          if (e.hitWall) {
+            if (Math.abs(e.x - ox) < Math.abs(vx) * 0.5) e.lx = -e.lx;
+            if (Math.abs(e.y - oy) < Math.abs(vy) * 0.5) e.ly = -e.ly;
+            e.bn--; this.shake = Math.max(this.shake, 2); this.ev({ k: 'slam', x: e.x, y: e.y });
+          }
+          if (e.bn <= 0 || e.t <= 0) { e.st = 'rest'; e.t = 1; }
+        } else if (e.st === 'rest' && e.t <= 0) { e.st = 'idle'; e.t = rr(0.8, 1.4); }
+        break;
+      case 'summoner':
+        e.q = (e.q ?? 2) - dt;
+        e.st = e.q < 0.5 ? 'wind' : 'idle';
+        if (e.q <= 0) {
+          e.q = 4;
+          if (this.enemies.filter(o => o.parent === e.id && !o.dead).length < 3) { const a = rnd() * TAU; this.addEnemy(d.child, e.x + Math.cos(a) * 14, e.y + Math.sin(a) * 14, { parent: e.id, spawnT: 0.5 }); }
+        }
+        break;
+      case 'armored':
+        this.move(e, ux * sp * dt, uy * sp * dt, 'e');
+        if (e.st === 'idle' && e.t <= 0) { e.st = 'wind'; e.t = 0.5; }
+        else if (e.st === 'wind' && e.t <= 0) { const off = (e.flip = !e.flip) ? 0 : Math.PI / 4; for (let k = 0; k < 4; k++) this.ebullet(e.x, e.y, off + k * Math.PI / 2, 80, 'n'); e.st = 'idle'; e.t = rr(2.4, 3.2); }
+        break;
+      case 'chaser': {
+        const w = Math.sin(e.age * 4 + e.id) * 0.5;
+        this.move(e, (ux - uy * w) * sp * (e.small ? 1.4 : 1) * dt, (uy + ux * w) * sp * (e.small ? 1.4 : 1) * dt, 'e'); break;
+      }
+      case 'leaper':
+        if (e.st === 'idle' && e.t <= 0) { e.st = 'crouch'; e.t = 0.5; }
+        else if (e.st === 'crouch' && e.t <= 0) { e.st = 'air'; e.t = 0.75; e.fx = e.x; e.fy = e.y; [e.tx, e.ty] = this.freeSpot(tgt.x, tgt.y); this.hazards.push({ k: 'tele', x: e.tx, y: e.ty, r: 14, t: 0, life: 0.75 }); }
+        else if (e.st === 'air') {
+          const k = 1 - Math.max(0, e.t) / 0.75;
+          e.x = e.fx + (e.tx - e.fx) * k; e.y = e.fy + (e.ty - e.fy) * k; e.z = Math.sin(k * Math.PI) * 30;
+          if (e.t <= 0) { e.z = 0; e.st = 'idle'; e.t = rr(1.2, 2); this.ring(e, d.ring || 8, 75, rnd() * 6, d.ring ? 'b' : 'r'); this.ev({ k: 'slam', x: e.x, y: e.y }); for (const p of this.alive()) if (Math.hypot(p.x - e.x, p.y - e.y) < 16) this.hurt(p, 1); }
+        }
+        break;
+      case 'healer': {
+        const away = dist < 110 ? 1 : -0.4;
+        this.move(e, (-ux * away - uy * 0.4) * sp * dt, (-uy * away + ux * 0.4) * sp * dt, 'e');
+        e.q = (e.q ?? 2) - dt; e.st = e.q < 0.5 ? 'wind' : 'idle';
+        if (e.q <= 0) {
+          e.q = 3.2;
+          for (const o of this.enemies) if (o !== e && !o.dead && o.hp < o.max && Math.hypot(o.x - e.x, o.y - e.y) < 75) o.hp = Math.min(o.max, o.hp + o.max * (o.boss ? 0.04 : 0.3));
+          this.ev({ k: 'healpulse', x: e.x, y: e.y });
+        }
+        break;
+      }
+      case 'hopper':
+        if (e.st === 'idle' && e.t <= 0) { e.st = 'hop'; e.t = 0.45; e.lx = ux; e.ly = uy; }
+        else if (e.st === 'hop') {
+          this.move(e, e.lx * sp * (e.small ? 1.3 : 1) * dt, e.ly * sp * (e.small ? 1.3 : 1) * dt, 'e');
+          e.z = Math.sin((1 - Math.max(0, e.t) / 0.45) * Math.PI) * 8;
+          if (e.t <= 0) { e.z = 0; e.st = 'idle'; e.t = rr(0.5, 1.1); if (d.shoot) this.fan(e, tgt, 3, 0.3, 90, 'b'); }
+        }
+        break;
+      case 'turret':
+        if (e.st === 'idle' && e.t <= 0) { e.st = 'wind'; e.t = 0.55; }
+        else if (e.st === 'wind' && e.t <= 0) { if (d.pattern === 'ring') this.ring(e, 10, 70, rnd() * 6, 'b'); else this.fan(e, tgt, 5, 0.22, 95, 'r'); e.st = 'idle'; e.t = rr(2.2, 3); this.ev({ k: 'spit', x: e.x, y: e.y }); }
+        break;
+      case 'ghost': {
+        e.gt = (e.gt || 0) + dt;
+        const hidden = e.gt % 4 > 2.6;
+        e.under = hidden ? 1 : 0; e.hide = hidden ? 1 : 0;
+        const side = Math.sin(e.age * 1.7);
+        this.move(e, (ux * (dist > 60 ? 1 : -0.5) - uy * side) * sp * dt, (uy * (dist > 60 ? 1 : -0.5) + ux * side) * sp * dt, 'f');
+        e.q = (e.q ?? 1) - dt;
+        if (e.q <= 0 && !hidden) { e.q = 1.3; this.fan(e, tgt, 1, 0, 100, 'b'); }
+        e.st = !hidden && e.q < 0.35 ? 'wind' : 'idle';
+        break;
+      }
+      case 'wallcrawler':
+        e.pp += sp * dt * e.dir; [e.x, e.y] = this.perimPt(e.pp);
+        if (e.st === 'idle' && e.t <= 0) { e.st = 'wind'; e.t = 0.4; }
+        else if (e.st === 'wind' && e.t <= 0) { this.fan(e, tgt, 1, 0, 95, 'b'); e.st = 'idle'; e.t = rr(1.3, 1.9); if (rnd() < 0.3) e.dir = -e.dir; }
+        break;
+      case 'teleport':
+        if (e.st === 'idle' || e.st === 'gone') {
+          e.st = 'gone'; e.under = 1; e.hide = 1;
+          if (e.t <= 0) { const a = rnd() * TAU, r = rr(55, 85); [e.x, e.y] = this.freeSpot(tgt.x + Math.cos(a) * r, tgt.y + Math.sin(a) * r); e.st = 'appear'; e.t = 0.55; this.hazards.push({ k: 'tele', x: e.x, y: e.y, r: 9, t: 0, life: 0.55 }); }
+        } else if (e.st === 'appear' && e.t <= 0) { e.st = 'up'; e.under = 0; e.hide = 0; e.t = 1.4; this.ring(e, 6, 70, rnd() * 6, 'b'); }
+        else if (e.st === 'up' && e.t <= 0) { this.fan(e, tgt, 3, 0.25, 100, 'b'); e.st = 'gone'; e.t = rr(1, 1.8); }
+        break;
+      case 'dasher':
+        if (e.st === 'idle') { this.move(e, ux * sp * dt, uy * sp * dt, 'e'); if (dist < 130 && e.t <= 0) { e.st = 'wind'; e.t = 0.45; e.n = 3; e.lx = ux; e.ly = uy; } }
+        else if (e.st === 'wind' && e.t <= 0) { e.st = 'lunge'; e.t = 0.28; }
+        else if (e.st === 'lunge') { this.move(e, e.lx * 230 * dt, e.ly * 230 * dt, 'e'); if (e.t <= 0 || e.hitWall) { e.n--; if (e.n > 0) { e.st = 'wind'; e.t = 0.25; e.lx = ux; e.ly = uy; } else { e.st = 'rest'; e.t = 1.1; } } }
+        else if (e.st === 'rest' && e.t <= 0) { e.st = 'idle'; e.t = rr(0.5, 1); }
+        break;
+      case 'orbiter': {
+        if (e.a === undefined) e.a = Math.atan2(-dy, -dx);
+        e.a += dt * 0.9 * (e.id % 2 ? 1 : -1);
+        const ox = tgt.x + Math.cos(e.a) * 75, oy = tgt.y + Math.sin(e.a) * 75, vx = ox - e.x, vy = oy - e.y, l = Math.hypot(vx, vy) || 1, s2 = Math.min(l * 3, sp);
+        this.move(e, vx / l * s2 * dt, vy / l * s2 * dt, 'f');
+        e.q = (e.q ?? 1.5) - dt; e.st = e.q < 0.4 ? 'wind' : 'idle';
+        if (e.q <= 0) { e.q = 1.8; this.fan(e, tgt, 1, 0, 105, 'b'); }
+        break;
+      }
+    }
+  }
+
+  // ---------- the six organs beyond the heart
+  bossAI2(e, dt, tgt, ph, fast, alive, ux, uy, dx, dy) {
+    switch (e.type) {
+      case 'bileduke':
+        if (e.st === 'idle') {
+          this.moveToward(e, tgt, 16, dt);
+          if (e.t <= 0) { e.st = pick(['spiral', 'rain', 'globs', 'spiral']); e.t = e.st === 'spiral' ? 2.4 : 0.6; e.a = rnd() * 6; this.ev({ k: 'tele', boss: 1 }); }
+        } else if (e.st === 'spiral') {
+          e.q = (e.q || 0) - dt;
+          if (e.q <= 0) { e.q = fast ? 0.07 : 0.1; e.a += 0.33; for (let k = 0; k < 3; k++) this.ebullet(e.x, e.y, e.a + k * TAU / 3, 72, 'b'); }
+          if (e.t <= 0) { e.st = 'idle'; e.t = fast ? 0.9 : 1.4; }
+        } else if (e.st === 'rain' && e.t <= 0) {
+          for (let i = 0; i < (fast ? 8 : 6); i++) { const p = pick(alive); this.hazards.push({ k: 'tele', x: clamp(p.x + rr(-60, 60), L + 10, Rx - 10), y: clamp(p.y + rr(-40, 40), T + 10, By - 10), r: 13, t: 0, life: 0.9 + i * 0.1, then: 'drip' }); }
+          e.st = 'idle'; e.t = fast ? 1.4 : 2;
+        } else if (e.st === 'globs' && e.t <= 0) {
+          if (this.enemies.length < 7) for (const sx of [-1, 1]) this.addEnemy('bileblob', e.x + sx * 30, e.y + 10, { spawnT: 0.4 });
+          this.ring(e, 12, 70, 0, 'b'); e.st = 'idle'; e.t = 1.6;
+        }
+        break;
+      case 'twins': {
+        const qx = tgt.x - e.cx, qy = tgt.y - e.cy, ql = Math.hypot(qx, qy) || 1;
+        e.cx = clamp(e.cx + qx / ql * 14 * dt, L + 40, Rx - 40); e.cy = clamp(e.cy + qy / ql * 14 * dt, T + 34, By - 34);
+        e.a = (e.a || 0) + dt * (fast ? 1.9 : 1.2);
+        const R = e.st === 'pull' ? 12 : 30;
+        e.x = e.cx + Math.cos(e.a) * R; e.y = e.cy + Math.sin(e.a) * R * 0.8;
+        e.segs = [[e.cx - Math.cos(e.a) * R, e.cy - Math.sin(e.a) * R * 0.8]];
+        if (e.st === 'idle' && e.t <= 0) { e.st = rnd() < 0.6 ? 'volley' : 'pull'; e.t = e.st === 'volley' ? 0.4 : 1.2; e.n = 4; this.ev({ k: 'tele', boss: 1 }); }
+        else if (e.st === 'volley' && e.t <= 0) {
+          const src = e.n % 2 ? { x: e.x, y: e.y } : { x: e.segs[0][0], y: e.segs[0][1] };
+          this.fan(src, tgt, 3, 0.25, 110, 'r'); e.n--; e.t = 0.4;
+          if (e.n <= 0) { e.st = 'idle'; e.t = fast ? 0.9 : 1.4; }
+        } else if (e.st === 'pull' && e.t <= 0) {
+          for (const src of [{ x: e.x, y: e.y }, { x: e.segs[0][0], y: e.segs[0][1] }]) this.ring(src, fast ? 14 : 10, 75, rnd() * 6, 'b');
+          this.shake = 4; e.st = 'idle'; e.t = 1.2;
+        }
+        break;
+      }
+      case 'taster':
+        e.x = CX + Math.sin(e.age * 0.55) * 90; e.y = OY + 60 + Math.sin(e.age * 1.1) * 5;
+        if (e.st === 'idle' && e.t <= 0) { e.st = rnd() < 0.55 ? 'lick' : 'spit'; e.t = 0.5; this.ev({ k: 'tele', boss: 1 }); }
+        else if (e.st === 'lick' && e.t <= 0) {
+          const rows = [tgt.y]; if (fast) rows.push(clamp(tgt.y + (tgt.y < CY ? 40 : -40), T + 8, By - 8));
+          for (const yy of rows) for (let x = L + 6; x < Rx - 4; x += 15) this.hazards.push({ k: 'tele', x, y: yy, r: 7, t: 0, life: 0.85, then: 'spike' });
+          if (fast) for (let y = T + 6; y < By - 4; y += 15) this.hazards.push({ k: 'tele', x: tgt.x, y, r: 7, t: 0, life: 0.85, then: 'spike' });
+          e.st = 'idle'; e.t = fast ? 1.4 : 1.9;
+        } else if (e.st === 'spit' && e.t <= 0) { this.fan(e, tgt, fast ? 9 : 7, 0.18, 105, 'b'); this.ev({ k: 'spit', x: e.x, y: e.y }); e.st = 'idle'; e.t = fast ? 1.1 : 1.6; }
+        break;
+      case 'ganglion':
+        if (e.st === 'idle' && e.t <= 0) {
+          e.st = pick(['lines', 'lines', 'ring']); e.t = e.st === 'lines' ? 0.8 : 0.4;
+          if (e.st === 'lines') { const a0 = Math.atan2(dy, dx); e.angs = fast ? [a0 - 0.7, a0 - 0.35, a0, a0 + 0.35, a0 + 0.7] : [a0 - 0.5, a0, a0 + 0.5]; for (const a of e.angs) this.hazards.push({ k: 'line', x: e.x, y: e.y, x2: e.x + Math.cos(a) * 400, y2: e.y + Math.sin(a) * 400, t: 0, life: 0.8 }); }
+          this.ev({ k: 'tele', boss: 1 });
+        } else if (e.st === 'lines' && e.t <= 0) { e.st = 'fire'; e.t = 0.6; e.q = 0; }
+        else if (e.st === 'fire') {
+          e.q -= dt; if (e.q <= 0) { e.q = 0.1; for (const a of e.angs) this.ebullet(e.x, e.y, a, 210, 'b', { r: 2.5 }); this.ev({ k: 'zap', pts: [[e.x, e.y], [e.x + Math.cos(e.angs[0]) * 60, e.y + Math.sin(e.angs[0]) * 60]] }); }
+          if (e.t <= 0) { e.st = fast ? 'hop' : 'idle'; e.t = fast ? 0.5 : 1.3; if (fast) { [e.nx, e.ny] = this.freeSpot(rr(L + 40, Rx - 40), rr(T + 30, By - 30)); this.hazards.push({ k: 'tele', x: e.nx, y: e.ny, r: 18, t: 0, life: 0.5 }); } }
+        } else if (e.st === 'hop' && e.t <= 0) { e.x = e.nx; e.y = e.ny; this.ring(e, 12, 80, rnd() * 6, 'b'); e.st = 'idle'; e.t = 1; }
+        else if (e.st === 'ring' && e.t <= 0) { for (let k = 0; k < 2; k++) this.ring(e, 16, 70 + k * 18, k * 0.2, 'b'); e.st = 'idle'; e.t = 1.4; }
+        break;
+      case 'optic': {
+        if (e.st === 'idle' && e.t <= 0) {
+          e.st = pick(['aim', 'aim', 'tears', 'shut']); e.t = e.st === 'aim' ? 0.85 : e.st === 'shut' ? 0.8 : 0.4;
+          if (e.st === 'aim') { e.a = Math.atan2(dy, dx); e.spin = (rnd() < 0.5 ? 1 : -1) * (fast ? 1.25 : 0.9); this.hazards.push({ k: 'line', x: e.x, y: e.y, x2: e.x + Math.cos(e.a) * 400, y2: e.y + Math.sin(e.a) * 400, t: 0, life: 0.85 }); }
+          this.ev({ k: 'tele', boss: 1 });
+        } else if (e.st === 'aim' && e.t <= 0) { e.st = 'beam'; e.t = 2.3; }
+        else if (e.st === 'beam') {
+          e.a += e.spin * dt; e.beamLen = 400;
+          const cx = Math.cos(e.a), cy = Math.sin(e.a);
+          for (const p of alive) { const px = p.x - e.x, py = p.y - 3 - e.y, along = px * cx + py * cy, off = Math.abs(px * cy - py * cx); if (along > 16 && off < 6 + p.r * 0.5) this.hurt(p, 1); }
+          if (fast) { e.q = (e.q || 0) - dt; if (e.q <= 0) { e.q = 0.5; this.ring(e, 8, 60, rnd() * 6, 'b'); } }
+          if (e.t <= 0) { e.st = 'idle'; e.t = 1.2; e.beamLen = 0; }
+        } else if (e.st === 'tears' && e.t <= 0) { this.ring(e, 18, 70, rnd() * 6, 'b'); this.ring(e, 9, 45, 0.3, 'b'); e.st = 'idle'; e.t = 1.3; }
+        else if (e.st === 'shut' && e.t <= 0) { this.fan(e, tgt, fast ? 11 : 9, 0.14, 120, 'r'); e.st = 'idle'; e.t = 1.3; }
+        break;
+      }
+      case 'mind':
+        if (e.st === 'idle') {
+          e.x += Math.sin(e.age * 0.8) * 10 * dt; e.y += Math.cos(e.age * 0.6) * 8 * dt;
+          if (e.t <= 0) { e.st = pick(['tp', 'psy', 'clones', 'mirror']); e.t = e.st === 'psy' ? 2.4 : 0.6; e.a = rnd() * 6; this.ev({ k: 'tele', boss: 1 }); if (e.st === 'tp') { let best = null; for (let i = 0; i < 8; i++) { const c = this.freeSpot(rr(L + 40, Rx - 40), rr(T + 30, By - 30)); if (alive.every(p => Math.hypot(p.x - c[0], p.y - c[1]) > 70)) { best = c; break; } } [e.nx, e.ny] = best || [CX, CY]; this.hazards.push({ k: 'tele', x: e.nx, y: e.ny, r: 20, t: 0, life: 0.6 }); } }
+        } else if (e.st === 'tp' && e.t <= 0) { e.x = e.nx; e.y = e.ny; this.ring(e, fast ? 18 : 14, 75, rnd() * 6, 'r'); this.shake = 3; e.st = 'idle'; e.t = fast ? 0.7 : 1.1; }
+        else if (e.st === 'psy') {
+          e.q = (e.q || 0) - dt;
+          if (e.q <= 0) { e.q = 0.09; e.a += 0.27; const arms = fast ? 4 : 3; for (let k = 0; k < arms; k++) this.ebullet(e.x, e.y, e.a + k * TAU / arms, 66, 'b'); }
+          if (e.t <= 0) { e.st = fast ? 'tp' : 'idle'; e.t = 0.5; [e.nx, e.ny] = this.freeSpot(rr(L + 40, Rx - 40), rr(T + 30, By - 30)); if (fast) this.hazards.push({ k: 'tele', x: e.nx, y: e.ny, r: 20, t: 0, life: 0.5 }); }
+        } else if (e.st === 'clones' && e.t <= 0) { if (this.enemies.length < 6) for (let i = 0; i < 2; i++) this.addEnemy('thought', e.x + rr(-40, 40), e.y + rr(-20, 30)); e.st = 'idle'; e.t = 1.2; }
+        else if (e.st === 'mirror' && e.t <= 0) { e.n = (e.n || 4) - 1; this.fan(e, pick(alive), 5, 0.2, 115, 'r'); e.t = 0.35; if (e.n <= 0) { e.n = 4; e.st = 'idle'; e.t = 1.2; } }
+        break;
     }
   }
 
@@ -677,7 +951,9 @@ export class Game {
           b.prism = 2; b.dmg *= 0.6;
           for (const s of [-0.45, 0.45]) { const c = Math.cos(s), sn = Math.sin(s); add.push({ ...b, hit: b.hit.slice(), vx: b.vx * c - b.vy * sn, vy: b.vx * sn + b.vy * c }); }
         }
-      } else if (b.curve) {
+      }
+      if (b.spin) { const a = Math.atan2(b.vy, b.vx) + b.spin * dt, sp = Math.hypot(b.vx, b.vy); b.vx = Math.cos(a) * sp; b.vy = Math.sin(a) * sp; }
+      if (b.en && b.curve) {
         const a = Math.atan2(b.vy, b.vx) + b.curve * dt, sp = Math.hypot(b.vx, b.vy); b.vx = Math.cos(a) * sp; b.vy = Math.sin(a) * sp;
       }
       const nx = b.x + b.vx * dt, ny = b.y + b.vy * dt;
@@ -706,7 +982,7 @@ export class Game {
         for (const e of this.enemies) {
           if (e.dead || e.spawnT > 0 || e.under || e.z > 14 || b.hit.includes(e.id)) continue;
           let hit = Math.hypot(e.x - b.x, e.y - 2 - b.y) < e.r + b.r;
-          if (!hit && e.segs) hit = e.segs.some(s => Math.hypot(s[0] - b.x, s[1] - b.y) < 7 + b.r);
+          if (!hit && e.segs) hit = e.segs.some(s => Math.hypot(s[0] - b.x, s[1] - b.y) < (e.segR || 7) + b.r);
           if (!hit) continue;
           b.hit.push(e.id);
           this.applyHit(e, b, add);
@@ -714,7 +990,8 @@ export class Game {
         }
       }
     }
-    for (const b of this.bullets) if (b.lob && b.life <= 0 && !b.popped) { b.popped = 1; const p = this.players[b.pl]; this.hazards.push({ k: 'vin', x: b.x, y: b.y + 4, r: 15, t: 0, life: 2.2, dmg: b.dmg0 * 2.3, pl: b.pl }); this.ev({ k: 'splat', x: b.x, y: b.y, en: 1, kk: 'b', big: 1 }); }
+    for (const b of this.bullets) if (b.lob === 2 && b.life <= 0 && !b.popped) { b.popped = 1; this.blast(this.players[b.pl], b.x, b.y + 4, b.dmg0 * 1.3); }
+    for (const b of this.bullets) if (b.lob === 1 && b.life <= 0 && !b.popped) { b.popped = 1; const p = this.players[b.pl]; this.hazards.push({ k: 'vin', x: b.x, y: b.y + 4, r: 15, t: 0, life: 2.2, dmg: b.dmg0 * 2.3, pl: b.pl }); this.ev({ k: 'splat', x: b.x, y: b.y, en: 1, kk: 'b', big: 1 }); }
     for (const a of add) this.bullets.push(a);
     this.bullets = this.bullets.filter(b => b.life > 0 && b.x > OX - 8 && b.x < OX + RW * TILE + 8 && b.y > OY - 8 && b.y < OY + RH * TILE + 8);
   }
@@ -728,7 +1005,8 @@ export class Game {
     if (st.vamp && p.hp < st.maxhp && rnd() < st.vamp + st.luck * 0.003) { p.hp++; this.ev({ k: 'heal', p: p.id, x: p.x, y: p.y }); }
     if (st.slowHit) e.slowT = 1.2 + 0.6 * st.slowHit;
     if (b.bomb) { b.bomb = 0; this.blast(p, b.x, b.y, b.dmg0); }
-    this.damage(e, dmg, p, { crit, kx: b.vx, ky: b.vy });
+    this.damage(e, dmg, p, { crit, kx: b.vx, ky: b.vy, kb: b.kb });
+    if (b.psn) e.poison = { t: 3, dps: 1 + b.dmg0 * 0.35, p: p.id };
     if (st.execute && !e.boss && !e.dead && e.hp > 0 && e.hp < e.max * st.execute) { this.ev({ k: 'exec', x: e.x, y: e.y }); this.damage(e, e.hp + 1, p); }
     if (st.splash) for (const o of this.enemies) if (o !== e && !o.dead && !o.under && o.spawnT <= 0 && Math.hypot(o.x - e.x, o.y - e.y) < 24 + o.r) this.damage(o, dmg * 0.35 * st.splash, p);
     if (st.burn) e.burn = { t: 2.5, dps: (1.2 + b.dmg0 * 0.35) * st.burn, p: p.id };
@@ -761,6 +1039,9 @@ export class Game {
           if (h.then === 'drip') { this.hazards.push({ k: 'zone', x: h.x, y: h.y, r: h.r, t: 0, life: 0.25 }); this.ring(h, 6, 55, rnd() * 6, 'b'); this.ev({ k: 'splat', x: h.x, y: h.y, en: 1, kk: 'b', big: 1 }); }
           if (h.then === 'spike') this.hazards.push({ k: 'spike', x: h.x, y: h.y, r: h.r, t: 0, life: 0.45 });
         }
+      } else if (h.k === 'epool') {
+        if (h.t > 0.4) for (const p of this.alive()) if (!p.st.acidproof && !p.st.flight && Math.hypot(p.x - h.x, p.y - h.y) < h.r + p.r - 3) this.hurt(p, 1);
+        if (h.t >= h.life) h.dead = 1;
       } else if (h.k === 'zone' || h.k === 'spike') {
         for (const p of this.alive()) if (Math.hypot(p.x - h.x, p.y - h.y) < h.r + p.r - 2) this.hurt(p, 1);
         if (h.t >= h.life) h.dead = 1;
@@ -781,7 +1062,7 @@ export class Game {
     if (this.room.cleared || this.room.type === 'boss') return;
     this.biteT -= dt;
     if (this.biteT > 0) return;
-    this.biteT = rr(3.5 - this.fi * 0.25, 6 - this.fi * 0.4);
+    this.biteT = rr(Math.max(1.6, 3.5 - this.fi * 0.25), Math.max(2.4, 6 - this.fi * 0.4));
     const cands = [];
     for (const p of this.alive()) {
       if (p.st.biteproof) continue;
@@ -892,7 +1173,7 @@ export class Game {
       t: 's', tm: r1(this.time), te: this.teeth, xp: this.xp, nd: this.xpNeed(), lv: this.level, en: this.enemies.length, ma: this.marrow, cl: this.room.cleared ? 1 : 0, st: this.state, sh: r1(this.shake), rt: r1(this.roomT),
       P: this.players.map(p => ({ x: r1(p.x), y: r1(p.y), hp: p.hp, mh: p.st.maxhp, ob: p.st.orbit, inv: r1(p.inv), dn: p.down ? 1 : 0, f: p.face, mv: p.moving ? 1 : 0, an: r1(p.anim), da: p.dashT > 0 ? 1 : 0, pr: p.present ? 1 : 0, sh: p.shieldUp ? 1 : 0, au: p.st.aura, bd: p.st.buddy, wp: p.weapon, oa: r1(p.orbA), it: p.items, pd: p.pend, of: p.offer })),
       E: this.enemies.map(e => ({ id: e.id, ty: e.type, x: r1(e.x), y: r1(e.y), r: e.r, fl: e.flash > 0 ? 1 : 0, hp: r1(e.hp), mx: r1(e.max), s: e.st, b: e.boss ? 1 : 0, sp: r1(e.spawnT), z: r1(e.z || 0),
-        sg: e.segs ? e.segs.map(s => [r1(s[0]), r1(s[1])]) : undefined, pu: r1(e.pulse || 0), br: r1(e.br || 0), a: r1(e.a || 0), ag: r1(e.age), sm: e.small ? 1 : 0, u: e.under ? 1 : 0, t: r1(e.t), bu: e.burn ? 1 : 0, po: e.poison ? 1 : 0 })),
+        sg: e.segs ? e.segs.map(s => [r1(s[0]), r1(s[1])]) : undefined, pu: r1(e.pulse || 0), br: r1(e.br || 0), a: r1(e.a || 0), ag: r1(e.age), sm: e.small ? 1 : 0, u: e.under ? 1 : 0, hd: e.hide ? 1 : 0, sr: e.segR, ln: e.beamLen, t: r1(e.t), bu: e.burn ? 1 : 0, po: e.poison ? 1 : 0 })),
       B: this.bullets.flatMap(b => [r1(b.x), r1(b.y), Math.round(b.vx), Math.round(b.vy), r1(b.r), b.k, b.en ? 1 : 0]),
       K: this.pickups.map(k => ({ kind: k.kind, id: k.id, x: r1(k.x), y: r1(k.y), price: k.price, v: k.v })),
       H: this.hazards.map(h => ({ k: h.k, pl: h.pl, x: r1(h.x), y: r1(h.y), r: h.r, t: r1(h.t), life: h.life, x2: h.x2, y2: h.y2, w: h.w, h: h.h, side: h.side })),

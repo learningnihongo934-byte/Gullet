@@ -84,9 +84,15 @@ const SONGS = [
   { bpm: 104, root: 40, bass: [0, 0, -1, 0, 3, -1, 1, -1, 0, 0, -1, 0, -2, -1, -1, 1], arp: [0, 1, 5, 8], arpOn: [0, 4, 6, 10, 12], heart: 1 },
   { bpm: 110, root: 42, bass: [0, -1, 0, 7, -1, 6, -1, 3, 0, -1, 0, 7, -1, 8, -1, 7], arp: [0, 3, 7, 11], arpOn: [0, 2, 4, 8, 10, 12, 14], heart: 1 },
   { bpm: 120, root: 38, bass: [0, -1, 0, -1, 0, -1, 3, -1, 0, -1, 0, -1, 1, -1, -1, -1], arp: [0, 3, 7, 10, 15], arpOn: [0, 1, 4, 6, 8, 9, 12, 14], heart: 1 },
+  { bpm: 96, root: 41, bass: [0, -1, -1, 3, -1, -1, 5, -1, 0, -1, -1, 3, -1, 6, 5, -1], arp: [0, 3, 6, 10], arpOn: [0, 3, 6, 9, 12], heart: 1 },
+  { bpm: 102, root: 44, bass: [0, -1, 0, -1, -2, -1, -2, -1, 0, -1, 0, -1, 3, -1, 2, -1], arp: [0, 7, 12, 15], arpOn: [0, 2, 4, 8, 10, 12], heart: 1 },
+  { bpm: 108, root: 46, bass: [0, 0, -1, 0, 7, -1, 5, -1, 0, 0, -1, 0, 3, -1, 2, -1], arp: [0, 4, 7, 11, 14], arpOn: [0, 1, 2, 4, 6, 8, 9, 10, 12, 14], heart: 1 },
+  { bpm: 124, root: 39, bass: [0, -1, -1, -1, 1, -1, -1, -1, 0, -1, -1, -1, 6, -1, 5, -1], arp: [0, 1, 6, 7, 12], arpOn: [0, 2, 3, 5, 8, 10, 11, 13], heart: 1 },
+  { bpm: 90, root: 43, bass: [0, -1, -1, -1, -1, -1, -1, -1, 3, -1, -1, -1, 2, -1, -1, -1], arp: [0, 3, 7, 10, 14, 17], arpOn: [0, 2, 4, 6, 8, 10, 12, 14], heart: 1 },
+  { bpm: 128, root: 37, bass: [0, -1, 0, 12, -1, 10, -1, 7, 0, -1, 0, 12, -1, 11, -1, 8], arp: [0, 3, 7, 11, 14], arpOn: [0, 1, 3, 4, 6, 8, 9, 11, 12, 14], heart: 1 },
 ];
 const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
-export function setMusic(i, boss = false) { curSong = i; bossMode = boss; }
+export function setMusic(i, boss = false) { curSong = i < 0 ? i : i % 12; bossMode = boss; }
 function schedule() {
   if (!ac || curSong < -1) return;
   const song = SONGS[curSong + 1] || SONGS[0];

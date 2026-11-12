@@ -1,9 +1,12 @@
 // Co-op networking. A tiny Durable Object relays messages between the host and the guest.
 // The host runs the game; the guest sends inputs and draws a Mirror built from the host's snapshots.
+// The desktop app has no server of its own, so co-op goes to the live site.
+const BASE = location.protocol === 'app:' ? 'https://gullet.rennko.tech' : location.origin;
+
 export class Net {
   constructor(onMsg, onStatus) { this.onMsg = onMsg; this.onStatus = onStatus; this.ws = null; this.code = null; this.role = null; this.closed = false; }
   async host() {
-    const r = await fetch('/api/room', { method: 'POST' });
+    const r = await fetch(BASE + '/api/room', { method: 'POST' });
     const j = await r.json();
     if (!r.ok) throw new Error(j.error || 'Could not open a room');
     this.connect(j.code, 'host');
@@ -12,7 +15,7 @@ export class Net {
   join(code) { this.connect(code.toUpperCase().replace(/[^A-Z]/g, ''), 'guest'); }
   connect(code, role) {
     this.code = code; this.role = role; this.closed = false;
-    const ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/api/room/${code}/ws?role=${role}`);
+    const ws = new WebSocket(`${BASE.replace(/^http/, 'ws')}/api/room/${code}/ws?role=${role}`);
     this.ws = ws;
     ws.onopen = () => this.onStatus('open');
     ws.onmessage = e => { try { this.onMsg(JSON.parse(e.data)); } catch {} };
@@ -55,7 +58,7 @@ export class Mirror {
     this.enemies = s.E.map(q => {
       seen.add(q.id);
       const e = prev.get(q.id) || { id: q.id, x: q.x, y: q.y };
-      Object.assign(e, { type: q.ty, r: q.r, flash: q.fl ? 0.05 : 0, hp: q.hp, max: q.mx, st: q.s, boss: !!q.b, spawnT: q.sp, z: q.z, segs: q.sg, pulse: q.pu, br: q.br, a: q.a, age: q.ag, small: !!q.sm, under: !!q.u, t: q.t, burn: q.bu, poison: q.po });
+      Object.assign(e, { type: q.ty, r: q.r, flash: q.fl ? 0.05 : 0, hp: q.hp, max: q.mx, st: q.s, boss: !!q.b, spawnT: q.sp, z: q.z, segs: q.sg, pulse: q.pu, br: q.br, a: q.a, age: q.ag, small: !!q.sm, under: !!q.u, hide: !!q.hd, segR: q.sr, beamLen: q.ln, t: q.t, burn: q.bu, poison: q.po });
       this.target.set(q.id, [q.x, q.y]);
       if (Math.hypot(e.x - q.x, e.y - q.y) > 40) { e.x = q.x; e.y = q.y; }
       return e;

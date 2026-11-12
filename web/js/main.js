@@ -1,6 +1,6 @@
 // Gullet: menus, input, saving, the game loop, and co-op wiring.
-import { W, H, FLOORS, ITEM, ITEMS, UPGRADES, BOSSES, WEAPONS, WEAPON } from './data.js';
-import { buildSprites, SPR } from './sprites.js';
+import { W, H, FLOORS, FL, ITEM, ITEMS, UPGRADES, BOSSES, WEAPONS, WEAPON, ENEMIES } from './data.js';
+import { buildSprites, SPR, bosses, whiteOf } from './sprites.js';
 import { Game } from './sim.js';
 import { Renderer } from './render.js';
 import { Net, Mirror } from './net.js';
@@ -18,9 +18,15 @@ const store = {
   del(k) { try { localStorage.removeItem(k); } catch {} },
 };
 const META = 'gullet.meta', RUN = 'gullet.run';
-const meta = Object.assign({ marrow: 0, up: {}, stats: { climbs: 0, wins: 0, best: 0, kills: 0, organs: 0 }, prefs: { music: true, sfx: true }, weapon: 'salt', seenLog: '', found: [] }, store.get(META, {}));
-const VERSION = '1.4';
+const meta = Object.assign({ marrow: 0, up: {}, stats: { climbs: 0, wins: 0, best: 0, kills: 0, organs: 0 }, prefs: { music: true, sfx: true }, weapon: 'salt', seenLog: '', found: [], beasts: {} }, store.get(META, {}));
+meta.beasts = meta.beasts || {};
+let metaDirty = false;
+const hasWeapon = id => { const w = WEAPON[id]; return !!w && (!w.boss || (meta.wun || []).includes(id)); };
+setInterval(() => { if (metaDirty) { metaDirty = false; saveMeta(); } }, 4000);
+const VERSION = '1.6';
 const LOG = [
+  { v: '1.6', date: 'November 12, 2026', notes: ['Infinite mode: the climb no longer stops at the heart. Six new body parts lie beyond it: the Liver, Kidneys, Tongue, Nerves, Eye and Brain, each with its own colours, music and organ to stop. After the Brain the whole tower loops, harder every time. Your deepest floor is recorded.', '30 new monsters: snipers that aim a line of light, bombers, healers, mine-laying moths, wall-crawlers, teleporting sparks, summoners, spinners, leapers, armoured vertebrae, swarms of ticks, and a molar that pretends to be a tooth on the floor.', 'Six new organs: the Bile Duke, the Twins, the Taster, the Ganglion, the Optic (watch the beam) and the Mind.', 'Six weapons won from organs: stop each of the first six for the first time to unlock the Acid Spitter, Bile Cannon, Wind Horn, Lamprey Ring, Marrow Lance and Heartstring.', 'The Index now holds 44 monsters and organs and all 12 weapons.'] },
+  { v: '1.5', date: 'November 12, 2026', notes: ['The Index: every card, monster, organ and weapon in one place. What you have not found yet stays a silhouette.', 'A desktop app for Mac and Windows that runs fullscreen and works offline. Co-op still connects online.', 'The game now scales to fill your window.'] },
   { v: '1.4', date: 'November 12, 2026', notes: ['66 new cards: 150 in all. New ones bring pets that follow you and shoot, thorns, dodging, a Deck of Cards that shows extra choices, finishing blows, damage streaks, XP boosts and bone shards that burst out of dead enemies.', 'Starting weapons: Salt, Pepper Spray, Pebble Sling, Vinegar Flask, Bone Boomerang and Matchsticks. Pick one before each climb. In co-op, each climber picks their own.', 'A new title screen: the tower breathes, chews and watches you climb.', 'Your collection: the title screen counts how many of the 150 cards you have ever kept.', 'This update log.'] },
   { v: '1.3', date: 'November 12, 2026', notes: ['50 new cards (84 in all), including the Wishbone, Snow Globe, Garlic Clove, Fishhook, Shrapnel and Toothbrush.', 'Each card has its own hand-drawn sprite.'] },
   { v: '1.2', date: 'November 12, 2026', notes: ['Dashing makes you completely untouchable. Shots pass straight through you.', 'A short grace window after each dash, so you can\'t get clipped coming out of it.', 'You can dash while standing still. You go the way you are facing.'] },
@@ -78,7 +84,7 @@ function readInput(view, me) {
 // ---------- screens
 let mode = 'menu', paused = false, game = null, mirror = null, net = null;
 let guestMeta = null, guestIn = {}, lastGuestDs = 0, snapT = 0, roomT = 0, pendingEv = [], endShown = false;
-const screens = ['title', 'coop', 'camp', 'help', 'pause', 'end', 'arm', 'log'];
+const screens = ['title', 'coop', 'camp', 'help', 'pause', 'end', 'arm', 'log', 'index'];
 function show(id) {
   for (const s of screens) $('#' + s).classList.toggle('hidden', s !== id);
   if (id === 'title') refreshTitle();
@@ -92,31 +98,39 @@ function refreshTitle() {
   const RN = ['i.', 'ii.', 'iii.', 'iv.', 'v.', 'vi.'];
   [...document.querySelectorAll('#title .menu button:not(.hidden) i')].forEach((el, n) => { el.textContent = RN[n]; });
   const st = meta.stats;
-  $('#contWhere').textContent = run && !run.coop ? `Plate ${FLOORS[run.fi].plate}, level ${run.level || 1}` : '';
+  $('#contWhere').textContent = run && !run.coop ? `${run.endless ? 'Infinite, ' : ''}plate ${FL(run.fi).plate}, level ${run.level || 1}` : '';
+  $('#seal b').textContent = VERSION;
   const cell = (v, l) => `<div><dt>${v}</dt><dd>${l}</dd></div>`;
-  $('#ledger').innerHTML = cell(st.climbs, 'climbs') + cell(st.best ? FLOORS[Math.min(5, st.best - 1)].plate : '–', 'deepest plate') + cell(st.organs || 0, 'organs stopped') + cell(`${(meta.found || []).length}<small>/${ITEMS.length}</small>`, 'cards kept') + (st.wins ? '' : '');
+  $('#ledger').innerHTML = cell(st.climbs, 'climbs') + cell(st.best ? FL(st.best - 1).plate : '–', 'deepest plate') + cell(st.inf ? FL(st.inf - 1).plate : '–', 'deepest infinite') + cell(st.organs || 0, 'organs stopped') + cell(`${(meta.found || []).length}<small>/${ITEMS.length}</small>`, 'cards kept') + (st.wins ? '' : '');
   $('#seal').classList.toggle('seen', meta.seenLog === VERSION);
   $('#verLine').textContent = `Version ${VERSION} · ${meta.marrow} marrow`;
 }
 document.querySelectorAll('[data-back]').forEach(b => b.onclick = () => { if (net && mode === 'menu') { net.close(); net = null; } show('title'); });
-$('#bNew').onclick = () => {
+let pendingEndless = false;
+$('#bInf').onclick = () => { pendingEndless = true; openArm(); };
+$('#bNew').onclick = () => { pendingEndless = false; openArm(); };
+function openArm() {
   initAudio(); renderWeapons();
+  $('#armTitle').textContent = pendingEndless ? 'Infinite climb: choose your weapon' : 'Choose your weapon';
   const run = store.get(RUN, null);
-  $('#armWarn').textContent = run && !run.coop ? `Starting a new climb replaces your saved one (Plate ${FLOORS[run.fi].plate}, level ${run.level || 1}).` : '';
+  $('#armWarn').textContent = run && !run.coop ? `Starting a new climb replaces your saved one (Plate ${FL(run.fi).plate}, level ${run.level || 1}).` : '';
   show('arm');
-};
+}
 function renderWeapons() {
   const box = $('#weapons'); box.innerHTML = '';
   for (const w of WEAPONS) {
-    const b = document.createElement('button'); b.className = 'wcard' + (meta.weapon === w.id ? ' on' : '');
-    b.innerHTML = `<img alt="" src="${SPR['w_' + w.id].c.toDataURL()}"><b>${w.name}</b><span>${w.desc}</span><em>${w.stats}</em>`;
-    b.onclick = () => { meta.weapon = w.id; saveMeta(); store.del(RUN); startSolo(null); };
+    const locked = !hasWeapon(w.id);
+    const b = document.createElement('button'); b.className = 'wcard' + (meta.weapon === w.id ? ' on' : '') + (locked ? ' lock' : '');
+    b.innerHTML = locked ? `<img alt="" src="${pic(SPR['w_' + w.id].c, true)}"><b>???</b><span>Stop ${BOSSES[w.boss].name} to unlock this weapon.</span><em>Locked</em>` : `<img alt="" src="${SPR['w_' + w.id].c.toDataURL()}"><b>${w.name}</b><span>${w.desc}</span><em>${w.stats}</em>`;
+    b.disabled = locked;
+    b.onclick = () => { meta.weapon = w.id; saveMeta(); store.del(RUN); startSolo(null, pendingEndless); };
     box.appendChild(b);
   }
 }
 function renderCoopWeapons() {
   const box = $('#coopWeapons'); box.innerHTML = '';
   for (const w of WEAPONS) {
+    if (!hasWeapon(w.id)) continue;
     const b = document.createElement('button'); b.title = `${w.name}: ${w.stats}`; b.className = meta.weapon === w.id ? 'on' : '';
     b.innerHTML = `<img alt="${w.name}" src="${SPR['w_' + w.id].c.toDataURL()}">`;
     b.onclick = () => { meta.weapon = w.id; saveMeta(); renderCoopWeapons(); if (net && net.role === 'guest') net.send({ t: 'hello', meta: { up: meta.up, weapon: meta.weapon } }); };
@@ -124,6 +138,36 @@ function renderCoopWeapons() {
   }
 }
 $('#bLog').onclick = () => openLog();
+$('#bIndex').onclick = () => { show('index'); renderIndex('cards'); };
+document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => renderIndex(b.dataset.tab));
+const urlCache = new Map();
+const pic = (c, locked) => { const k = c; let m = urlCache.get(k); if (!m) { m = { on: c.toDataURL(), off: whiteOf(c, '#7a6658').toDataURL() }; urlCache.set(k, m); } return locked ? m.off : m.on; };
+const BOSS_PIC = () => { const B = bosses(); return { dangler: B.dangler, churn: B.churn, bellows: B.bellows, coil: B.coilHead, marrow: B.marrow, heart: B.heart, bileduke: B.bileduke, twins: B.kidney, taster: B.taster, ganglion: B.ganglion, optic: B.optic, mind: B.mind }; };
+function indexEntries(tab) {
+  if (tab === 'cards') return ITEMS.map((it, n) => { const got = (meta.found || []).includes(it.id); return { got, img: SPR['i_' + it.id].c, html: got ? `<span class="tag">No. ${n + 1} · card</span><b>${it.name}</b><p>${it.desc}</p><p class="fl">${it.f}</p>` : `<span class="tag">No. ${n + 1} · card</span><b>???</b><p>Not kept yet. Keep it once from a level-up and it is recorded here for good.</p>` }; });
+  if (tab === 'monsters') {
+    const BP = BOSS_PIC();
+    const mons = Object.entries(ENEMIES).map(([id, d]) => { const kills = meta.beasts[id] || 0, where = FLOORS.filter(f => f.enemies.includes(id)).map(f => f.plate).join(', '); return { got: kills > 0, img: SPR[id].c, html: kills ? `<span class="tag">Found on plates ${where}</span><b>${d.name}</b><p>${d.lore}</p><p class="tag">Killed ${kills}</p>` : `<span class="tag">Found on plates ${where}</span><b>???</b><p>Kill one to record it here.</p>` }; });
+    const bs = Object.entries(BOSSES).map(([id, d]) => { const kills = meta.beasts[id] || 0, F = FLOORS.find(f => f.boss === id); return { got: kills > 0, img: BP[id], big: 1, html: kills ? `<span class="tag">Organ of plate ${F.plate} · ${F.name}</span><b>${d.name}</b><p>${d.lore}</p><p class="tag">Stopped ${kills}×</p>` : `<span class="tag">Organ of plate ${F.plate}</span><b>???</b><p>Stop this organ to record it here.</p>` }; });
+    return mons.concat(bs);
+  }
+  return WEAPONS.map(w => { const got = hasWeapon(w.id); return { got, img: SPR['w_' + w.id].c, html: got ? `<span class="tag">Weapon${w.boss ? ' · won from ' + BOSSES[w.boss].name : ''}${meta.weapon === w.id ? ' · your current pick' : ''}</span><b>${w.name}</b><p>${w.desc}</p><p class="fl">${w.stats}</p>` : `<span class="tag">Weapon</span><b>???</b><p>Stop ${BOSSES[w.boss].name} to unlock it.</p>` }; });
+}
+function renderIndex(tab) {
+  const nf = (meta.found || []).length, nm = Object.keys(ENEMIES).concat(Object.keys(BOSSES)).filter(k => meta.beasts[k]).length;
+  const labels = { cards: `Cards ${nf}/${ITEMS.length}`, monsters: `Monsters ${nm}/${Object.keys(ENEMIES).length + Object.keys(BOSSES).length}`, weapons: `Weapons ${WEAPONS.filter(w => hasWeapon(w.id)).length}/${WEAPONS.length}` };
+  document.querySelectorAll('.tabs button').forEach(b => { b.textContent = labels[b.dataset.tab]; b.classList.toggle('on', b.dataset.tab === tab); });
+  const grid = $('#ixGrid'); grid.innerHTML = ''; grid.classList.toggle('big', tab !== 'cards');
+  const list = indexEntries(tab), det = $('#ixDetail');
+  const select = (e, el) => { grid.querySelectorAll('.ix.on').forEach(x => x.classList.remove('on')); el.classList.add('on'); det.innerHTML = `<img class="pic" alt="" src="${pic(e.img, !e.got)}">${e.html}`; };
+  list.forEach((e, i) => {
+    const b = document.createElement('button'); b.className = 'ix' + (e.got ? '' : ' lock');
+    b.innerHTML = `<img alt="" src="${pic(e.img, !e.got)}">`;
+    b.onclick = () => select(e, b); b.onmouseenter = () => select(e, b);
+    grid.appendChild(b);
+    if (i === Math.max(0, list.findIndex(x => x.got))) select(e, b);
+  });
+}
 $('#seal').onclick = () => openLog();
 function openLog() {
   $('#logList').innerHTML = LOG.map(e => `<article><h3>Version ${e.v} <small>${e.date}</small></h3><ul>${e.notes.map(n => `<li>${n}</li>`).join('')}</ul></article>`).join('');
@@ -169,13 +213,15 @@ const SFX = { shoot: 'shoot', hit: 'hit', die: 'die', hurt: 'hurt', pick: 'pick'
 function handleEvents(view, evs) {
   for (const e of evs) {
     R.fx(view, e);
+    if ((e.k === 'die' || e.k === 'bossdie') && e.ty) { meta.beasts[e.ty] = (meta.beasts[e.ty] || 0) + 1; metaDirty = true; }
+    if (e.k === 'bossdie') { const w = WEAPONS.find(x => x.boss === e.ty); if (w && !(meta.wun = meta.wun || []).includes(w.id)) { meta.wun.push(w.id); saveMeta(); setTimeout(() => toast(`<div class="fig">New weapon</div><div class="nm">${w.name}</div><div class="ds">${w.desc}</div><div class="fl">Pick it before your next climb.</div>`, 4500), 2600); } }
     if (SFX[e.k]) sfx(SFX[e.k]);
     if (e.k === 'item' && e.p === view.me && !(meta.found || []).includes(e.id)) { (meta.found = meta.found || []).push(e.id); saveMeta(); }
     if (e.k === 'item' && !(mode === 'guest' && e.p === 1)) itemToast(e.id, view.coop ? (e.p === view.me ? 'you kept' : 'your partner kept') : '');
     if (e.k === 'toast') toast(`<div class="ds">${e.text}</div>`, 1800);
     if (e.k === 'boss') { card(e.plate, e.name, ''); setMusic(view.fi, true); }
     if (e.k === 'bossdie') { setMusic(view.fi, false); }
-    if (e.k === 'floor') { const F = FLOORS[e.fi]; card(F.plate, F.name, F.note); setMusic(e.fi); }
+    if (e.k === 'floor') { const F = FL(e.fi); card(F.plate, F.name, F.note); setMusic(e.fi); }
     if (e.k === 'wish') toast(`<div class="ds">${e.p === view.me ? 'The wishbone snapped. You got back up.' : 'Your partner\'s wishbone snapped.'}</div>`, 2200);
     if (e.k === 'levelup' && (view.enemyCount ?? view.enemies.length) > 0) toast(`<div class="ds">Level ${e.lv}. Pick a reward once the room is clear.</div>`, 1600);
     if (e.k === 'down' && view.coop) toast(`<div class="ds">${e.p === view.me ? 'You went down. Your partner has to clear the room.' : 'Your partner went down. Clear the room to bring them back.'}</div>`, 2600);
@@ -183,15 +229,16 @@ function handleEvents(view, evs) {
 }
 
 // ---------- solo / host
-function startSolo(save) {
+function startSolo(save, endless = false) {
   initAudio();
-  game = new Game({ coop: false, metas: [meta], save });
+  if (!hasWeapon(meta.weapon)) meta.weapon = 'salt';
+  game = new Game({ coop: false, metas: [meta], save, endless });
   game.me = 0; mode = 'solo'; paused = false; endShown = false;
   beginRun(save);
 }
 function beginRun(save) {
   show(null);
-  const F = FLOORS[game.fi];
+  const F = FL(game.fi);
   card(F.plate, F.name, save ? 'Back where you left off.' : F.note);
   setMusic(game.fi, game.room.type === 'boss' && !game.room.cleared);
   if (!save) { meta.stats.climbs++; saveMeta(); }
@@ -206,20 +253,21 @@ function finishRun() {
   const won = game.state === 'won';
   const earned = game.marrow + game.fi * 8 + Math.floor(game.kills / 5) + (won ? 60 : 0);
   meta.marrow += earned;
-  meta.stats.best = Math.max(meta.stats.best, game.fi + 1); meta.stats.kills += game.kills; meta.stats.organs = (meta.stats.organs || 0) + game.bosses; if (won) meta.stats.wins++;
+  metaDirty = false;
+  if (game.endless) meta.stats.inf = Math.max(meta.stats.inf || 0, game.fi + 1); else meta.stats.best = Math.max(meta.stats.best, game.fi + 1); meta.stats.kills += game.kills; meta.stats.organs = (meta.stats.organs || 0) + game.bosses; if (won) meta.stats.wins++;
   saveMeta(); store.del(RUN);
-  const res = { won, earned, fi: game.fi, kills: game.kills, time: game.time, bosses: game.bosses, items: game.players[0].items.length };
-  arcadeScore(game.bosses, { floor: game.fi + 1, won, level: game.level });
+  const res = { endless: game.endless, won, earned, fi: game.fi, kills: game.kills, time: game.time, bosses: game.bosses, items: game.players[0].items.length };
+  arcadeScore(Math.min(6, game.bosses), { floor: game.fi + 1, won, level: game.level });
   if (mode === 'host' && net) net.send({ t: 'end', ...res });
   sfx(won ? 'won' : 'dead'); setMusic(-1);
   setTimeout(() => endScreen(res), 1400);
 }
 function endScreen(r) {
-  const F = FLOORS[r.fi];
+  const F = FL(r.fi);
   $('#endPlate').textContent = 'Plate ' + F.plate;
   $('#endWhere').textContent = F.name;
-  $('#endTitle').textContent = r.won ? 'The heart is still.' : 'Digested.';
-  $('#endNote').textContent = r.won ? 'You climbed the whole tower and stopped its heart. For now it is quiet.' : `The tower got you in ${F.name.toLowerCase()}. It will remember the taste.`;
+  $('#endTitle').textContent = r.won ? 'The heart is still.' : r.endless ? `Swallowed at plate ${F.plate}.` : 'Digested.';
+  $('#endNote').textContent = r.endless ? `${F.name}${F.tier ? `, tier ${F.tier + 1}` : ''}. Your deepest infinite climb is plate ${FL(Math.max(0, (meta.stats.inf || 1) - 1)).plate}.` : r.won ? 'You climbed the whole tower and stopped its heart. For now it is quiet.' : `The tower got you in ${F.name.toLowerCase()}. It will remember the taste.`;
   const m = Math.floor(r.time / 60), s = String(Math.floor(r.time % 60)).padStart(2, '0');
   $('#endStats').innerHTML = `<dt>Reached</dt><dd>Plate ${F.plate}, ${F.name}</dd><dt>Organs stopped</dt><dd>${r.bosses}</dd><dt>Things killed</dt><dd>${r.kills}</dd><dt>Time inside</dt><dd>${m}:${s}</dd><dt>Marrow carried home</dt><dd>${r.earned}</dd>`;
   $('#bAgain').classList.toggle('hidden', mode === 'guest' || mode === 'host');
@@ -237,7 +285,7 @@ function togglePause() {
   paused = !paused;
   if (paused) {
     const view = mode === 'guest' ? mirror : game; if (!view) return;
-    const F = FLOORS[view.fi];
+    const F = FL(view.fi);
     $('#pauseWhere').textContent = `Plate ${F.plate} · ${F.name}`;
     const myp = view.players[mode === 'guest' ? 1 : 0], wpn = WEAPON[myp && myp.weapon] || WEAPON.salt;
     $('#pauseWeapon').textContent = `Carrying: ${wpn.name}. ${wpn.stats}.`;
@@ -271,7 +319,7 @@ $('#bAbandon').onclick = () => {
 // ---------- co-op lobby
 function resetLobby() {
   $('#roomCode').textContent = ''; $('#hostStatus').textContent = ''; $('#joinStatus').textContent = '';
-  $('#bStartCoop').classList.add('hidden'); $('#bContCoop').classList.add('hidden'); $('#bHost').disabled = false;
+  $('#bStartCoop').classList.add('hidden'); $('#bInfCoop').classList.add('hidden'); $('#bContCoop').classList.add('hidden'); $('#bHost').disabled = false;
   guestMeta = null;
 }
 $('#bHost').onclick = async () => {
@@ -297,6 +345,7 @@ $('#bJoin').onclick = () => {
 };
 $('#joinCode').addEventListener('keydown', e => { if (e.key === 'Enter') $('#bJoin').click(); });
 $('#bStartCoop').onclick = () => startCoop(null);
+$('#bInfCoop').onclick = () => startCoop(null, true);
 $('#bContCoop').onclick = () => { const run = store.get(RUN, null); if (run) startCoop(run); };
 
 function onHostMsg(m) {
@@ -311,7 +360,7 @@ function onHostMsg(m) {
     guestMeta = m.meta || {};
     if (!game) {
       $('#hostStatus').textContent = 'Your friend is here.';
-      $('#bStartCoop').classList.remove('hidden');
+      $('#bStartCoop').classList.remove('hidden'); $('#bInfCoop').classList.remove('hidden');
       const run = store.get(RUN, null);
       $('#bContCoop').classList.toggle('hidden', !(run && run.coop));
     }
@@ -322,8 +371,9 @@ function onHostMsg(m) {
     if (guestIn.ds !== undefined && guestIn.ds !== lastGuestDs) { lastGuestDs = guestIn.ds; guestIn.dashPending = true; }
   }
 }
-function startCoop(save) {
-  game = new Game({ coop: true, metas: [meta, guestMeta || {}], save });
+function startCoop(save, endless = false) {
+  if (!hasWeapon(meta.weapon)) meta.weapon = 'salt';
+  game = new Game({ coop: true, metas: [meta, guestMeta || {}], save, endless });
   game.me = 0; game.players[1].present = true;
   mode = 'host'; paused = false; endShown = false;
   net.send({ t: 'start' }); net.send(game.roomMsg());
@@ -339,7 +389,7 @@ function onGuestMsg(m) {
   if (m.t === 's' && mirror) { mirror.applySnap(m); if (m.ev && m.ev.length) handleEvents(mirror, m.ev); }
   if (m.t === 'end') {
     if (endShown) return; endShown = true;
-    meta.marrow += m.earned; meta.stats.climbs++; meta.stats.best = Math.max(meta.stats.best, m.fi + 1); if (m.won) meta.stats.wins++; meta.stats.kills += m.kills; meta.stats.organs = (meta.stats.organs || 0) + (m.bosses || 0); saveMeta();
+    meta.marrow += m.earned; meta.stats.climbs++; if (m.endless) meta.stats.inf = Math.max(meta.stats.inf || 0, m.fi + 1); else meta.stats.best = Math.max(meta.stats.best, m.fi + 1); if (m.won) meta.stats.wins++; meta.stats.kills += m.kills; meta.stats.organs = (meta.stats.organs || 0) + (m.bosses || 0); saveMeta();
     sfx(m.won ? 'won' : 'dead'); setMusic(-1);
     setTimeout(() => endScreen(m), 1400);
   }

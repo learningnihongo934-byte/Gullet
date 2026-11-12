@@ -84,6 +84,36 @@ const ART = {
   antibody: ['.......k........', '...k..kwk..k....', '...kkkwwwkkk....', '....kwwwwwwk....', '.kkkwwmwwmwwkkk.', 'kwwwwwwwwwwwwwwk', '.kkkwwwwwwwwkkk.', '....kwwmmwwk....', '...kkkwwwwkkk...', '...k..kwwk..k...', '.......kk.......'],
   crawler: ['................', '..k..........k..', '..wk..kkkk..kw..', '...wkkwwwwkkw...', '....kwkwwkwk....', '.kwwkwwwwwwkwwk.', 'k...kwrwwrwk...k', '...kwkwwwwkwk...', '..kw..kWWk..wk..', '..k....kk....k..'],
   burrower: ['................', '.....kkkkkk.....', '...kkPPPPPPkk...', '..kPPppppppPPk..', '..kPpkpppkppPk..', '.kPpppppppppPPk.', '.kPkwkwkwkwkPPk.', '.kPkkkkkkkkkkPk.', '..kPPPPPPPPPPk..', '...kkkkkkkkkk...'],
+  tick: ['................', '................', '.....k....k.....', '......k..k......', '....kkRRRRkk....', '...kRRrrrrRRk...', '..kRrrkrrkrrRk..', '..kRrrrrrrrrRk..', '...kRrrrrrrRk...', '..k.kkRRRRkk.k..', '.k...k....k...k.'],
+  molar: ['................', '....kkkkkkkk....', '...kwwwwewwwk...', '..kwwkwwwwkwwk..', '..kwwrwwwwrwwk..', '..kwwwwwwwwwWk..', '..kwkkkkkkkkWk..', '..kwkwkwkwkwWk..', '..kWwwwwwwwWWk..', '...kWWwwkWWWk...', '...kWWWkkWWk....', '....kWWk.kWk....', '....kk....kk....'],
+  bloat: ['................', '......kkkk......', '....kkggggkk....', '...kgggyyyggk...', '..kggkggggkggk..', '..kgggggggggGk..', '.kggggkkkkgggGk.', '.kgggkrrrrkggGk.', '.kGggggkkgggGGk.', '..kGGgggggggGk..', '...kkGGGGGGkk...', '.....kkkkkk.....'],
+  acidfly: ['................', '..kk........kk..', '.kyyk......kyyk.', '.kyGyk.kk.kyGyk.', '..kyyykNNkyyyk..', '...kyyNnnNyyk...', '....kkNnnNkk....', '...kyyNnnNyyk...', '..kyGykNNkyGyk..', '..kyyk.kk.kyyk..', '...kk......kk...'],
+  spore: ['................', '.....k.k.k......', '....kmkmkmk.....', '...kmmmmmmmk....', '..kmMmmmmmMmk...', '..kmmmkmkmmmk...', '..kMmmmmmmmMk...', '...kMMmmmMMk....', '....kGGGGGk.....', '...kGgggggGk....', '..kGGGGGGGGGk...'],
+  wheezer: ['................', '....kkkkkk......', '...kmmmmmmk.....', '..kmmkmmkmmk....', '..kmmmmmmmmkkk..', '..kmmmkkkmmkcck.', '..kmmmmmmmmkkk..', '...kMmmmmmMk....', '....kMMMMMk.....', '....kk..kk......'],
+  tapeworm: ['................', '................', '..kkkk..........', '.kwwwwkk..kkk...', '.kwkwwwwkkwwwk..', '.kwwwwwwwwwwwwk.', '..kkwwwWwwwWwwk.', '....kkWWkkWWkk..', '......kk..kk....'],
+  polyp: ['................', '....kkkkkkkk....', '...kppppppppk...', '..kpPpkppkpPpk..', '..kppppppppppk..', '.kpppkkkkkkpppk.', '.kppkRrrrrRkppk.', '.kppkRrrrrRkppk.', '.kPppkkkkkkppPk.', '.kPPpppppppppPk.', '..kPPPPPPPPPPk..', '...kkkkkkkkkk...'],
+  vertebra: ['................', '.....kkkkkk.....', '...kkwwwwwwkk...', '..kwwWwwwwWwwk..', '.kwwkkwwwwkkwwk.', 'kwwwwwwwwwwwwwwk', 'kWWwwwwkkwwwwWWk', '.kkWwwkrrkwwWkk.', '...kWwkkkkwWk...', '...kWWwwwwWWk...', '....kkkkkkkk....'],
+  shardling: ['................', '.......k........', '......kwk.......', '.....kwwwk......', '....kwwkwwk.....', '...kwwwwwwwk....', '..kwwkrwwrkwk...', '.kwwwwwwwwwwwk..', '..kWwwwkwwwWk...', '...kWWwkwWWk....', '....kkk.kkk.....'],
+  clot: ['................', '.....kkkkkk.....', '...kkRRRRRRkk...', '..kRRrrrrrrRRk..', '.kRrrrrrrrrrrRk.', '.kRrkkrrrrkkrRk.', '.kRrrrrrrrrrrRk.', '.kRrrrkkkkrrrRk.', '..kRrrrrrrrrRk..', '...kkRRRRRRkk...', '.....kkkkkk.....'],
+  platelet: ['................', '................', '.....kkkkk......', '...kkpppppkk....', '..kppeppppppk...', '..kppkpppkppk...', '..kpppppppppk...', '...kkPPPPPkk....', '.....kkkkk......'],
+  bileblob: ['................', '.....kkkkkk.....', '...kkggggggkk...', '..kggeggggggGk..', '.kgggkggggkggGk.', '.kggggggggggggk.', '.kgggkkkkkkgggk.', '.kGgggggggggGGk.', '..kGGGgggGGGGk..', '...kkkkkkkkkk...'],
+  lobule: ['................', '....kkkkkkkk....', '..kkMmmmmmmMkk..', '.kMmmmmmmmmmmMk.', '.kmmmkmmmmkmmmk.', 'kMmmmmmmmmmmmmMk', 'kMmmmkkkkkkmmmMk', 'kMmmmmmmmmmmmmMk', '.kMMmmmmmmmmMMk.', '..kkMMMMMMMMkk..', '....kkkkkkkk....'],
+  toxin: ['................', '......kkkk......', '....kkggggkk....', '...kgggeggggk...', '..kggkggggkggk..', '..kggggggggggk..', '...kggggggggk...', '....kgggggk.....', '....kgk.kgk.....', '.....k...gk.....', '..........k.....'],
+  stone: ['................', '....kkkkkkk.....', '..kkWWWwwWWkk...', '.kWWwwWWwwwWWk..', '.kWwwwwwwwwwWk..', 'kWwwkkwwwwkkwWk.', 'kWwwwwwwwwwwwWk.', 'kWWwwwkkkkwwWWk.', '.kWWwwwwwwwWWk..', '..kkWWWWWWWkk...', '....kkkkkkk.....'],
+  nephron: ['................', '.....kkkkkk.....', '...kkoooooook...', '..kooookkoooook.', '.kookkoooookkok.', '.kooooooooooook.', '..kNoooooooooNk.', '...kNNoooooNNk..', '..k.kkNNNNNkk.k.', '.k.k..kkkk..k.k.'],
+  urchin: ['.......k........', '..k....w....k...', '...k..kwk..k....', '....kkwwwkk.....', '.kwwwwwkwwwwwk..', '....kkwwwkk.....', '...k..kwk..k....', '..k....w....k...', '.......k........'],
+  tastebud: ['................', '................', '.....kkkkkk.....', '....kppppppk....', '...kpwpppwppk...', '...kppppppppk...', '...kppkkkkppk...', '..kkpkrrrrkpkk..', '.kppppkkkkppppk.', '.kPPPPPPPPPPPPk.', '..kkkkkkkkkkkk..'],
+  spitbug: ['................', '................', '....kkkkkkk.....', '...kyyyyyyyk....', '..kyykyyykyyk...', '..kyyyyyyyyyk...', '..kyyykkkyyyk...', '.k.kYYYYYYYk.k..', 'k.k.kk.k.kk.k.k.'],
+  papilla: ['................', '......kkk.......', '.....kpppk......', '....kpwpppk.....', '....kpppppk.....', '...kpppppppk....', '...kpPkpkPpk....', '..kpppppppppk...', '.kPPPPPPPPPPPk..', '..kkkkkkkkkkk...'],
+  spark: ['.......k........', '.......c........', '...k..kck..k....', '....kkcecckk....', '.kcccceeecccck..', '....kkcecckk....', '...k..kck..k....', '.......c........', '.......k........'],
+  synapse: ['................', '..k.....k.......', '...k...k........', '....kkkkk.......', '..kkbbbbbkk.....', '.kbbccccbbbk....', 'kbbcceeccbbbkkkk', '.kbbccccbbbk....', '..kkbbbbbkk.....', '....kkkkk.......', '...k...k........', '..k.....k.......'],
+  axon: ['................', '................', '.kkk............', 'kbbbkkkkkkkk....', 'kbcbbbbbbbbbkkk.', 'kbbbbBbbBbbbbbbk', '.kkkkkkkkkkbbbk.', '..........kkk...'],
+  floater: ['................', '..kk........kk..', '.kwwk.kkkk.kwwk.', '.kwwkkwwwwkkwwk.', '..kkwwwwwwwwkk..', '...kwwbbbbwwk...', '...kwbbkkbbwk...', '...kwbbkkbbwk...', '...kwwbbbbwwk...', '....kwwwwwwk....', '.....kkkkkk.....'],
+  tear: ['.......k........', '......kck.......', '......kck.......', '.....kccck......', '....kccecck.....', '...kcceccccck...', '...kcccccccbk...', '...kcckcckcbk...', '...kcccccccbk...', '....kbcccbbk....', '.....kkkkkk.....'],
+  lash: ['................', '................', '..k..k..k..k....', '...k.k..k.k.....', '....kKKKKk......', '...kKkKKkKk.....', '...kKKKKKKk.....', '....kKKKKk......', '...k......k.....'],
+  thought: ['................', '......kkkk......', '....kkmmmmkk....', '...kmmmmmmmmk...', '..kmmkkmmkkmmk..', '..kmmmmmmmmmmk..', '..kmmmmmmmmmmk..', '...kmmmmmmmmk...', '....kkmmmmkk....', '.....km..mk.....', '......k..k......'],
+  neuron: ['.k.............k', '..k...........k.', '...kk..kkk..kk..', '.....kkpppkk....', '....kppppppk....', 'kkkkppkppkpppkkk', '....kpppppppk...', '....kkppppkk....', '...kk.kkkk.kk...', '..k..........k..', '.k............k.'],
+  migraine: ['................', '....kkkkkkkk....', '..kkrrrrrrrrkk..', '.krrmmmmmmmmrrk.', '.krmmkmmmmkmmrk.', 'krmmmmmmmmmmmmrk', 'krmmmrrrrrrmmmrk', 'krmmrkkkkkkrmmrk', '.krmmmmmmmmmmrk.', '.kkrrrrrrrrrrkk.', '...kkkkkkkkkk...'],
   tooth: ['................', '....kkkkkkkk....', '...kwwwwewwwk...', '..kwwewwwwwwWk..', '..kwwwwwwwwwWk..', '..kwwwwwwwwwWk..', '..kwwwwwwwwWWk..', '..kWwwwwwwwWWk..', '..kWwwwwwwWWWk..', '...kWwwwwWWWk...', '...kWWwwkWWWk...', '...kWWWkkWWk....', '....kWWk.kWk....', '....kWk..kWk....', '.....kk...k.....'],
 };
 
@@ -245,6 +275,12 @@ const WEAPON_ART = {
   sling: ['.kk.....kk..', '.knk...knk..', '.kknk.knkk..', '..kwnnnwk...', '..kw.n.wk...', '.....n......', '....knk.....', '....knk.....', '....knk.....', '....kNk.....', '.....k......'],
   vinegar: ['....kkkk....', '....knnk....', '....kkkk....', '....kcck....', '...kcccck...', '..kcyyyyck..', '.kcyyeyyyck.', '.kcyyyyyyck.', '.kcyyyyyyck.', '..kccccccc..', '...kkkkkk...'],
   boomerang: ['.kkk........', 'kwwwk.......', 'kwwwwk......', '.kwwwwk.....', '..kwwwwkkkk.', '...kwwwwwwwk', '....kwwwwwwk', '.....kkkkkk.'],
+  acid: ['....kkkk....', '...kggggk...', '..kggegggk..', '..kgggggGk..', '...kgggGk...', '..k.kggk.k..', '.kgk.kk.kgk.', '..k......k..'],
+  cannon: ['............', '.kkkkkkkk...', 'kNnnnnnnnkk.', 'kNnyyyynnnnk', 'kNnnnnnnnkk.', '.kkkkkkkk...', '..kNk..kNk..', '..kkk..kkk..'],
+  horn: ['.........kk.', '.......kkyk.', '.....kkyyyk.', '...kkyyyyyk.', '.kkyyyyYyyk.', 'knyyYyyyyyk.', '.kkyyyyYyyk.', '...kkyyyyyk.', '.....kkyyyk.', '.......kkyk.', '.........kk.'],
+  lamprey: ['....kkkk....', '..kkmmmmkk..', '.kmwkwkwkmk.', '.kwk....kwk.', 'kmk......kmk', 'kwk......kwk', '.kmk....kmk.', '.kwkwkwkwmk.', '..kkmmmmkk..', '....kkkk....'],
+  lance: ['...........k', '..........kw', '.........kwk', '........kwk.', '.......kwk..', '......kwk...', '.....kwk....', '...kkWk.....', '..kWWk......', '.kWWk.......', '.kkk........'],
+  heartstring: ['.kkk.kkk....', 'krrrkrrrk...', 'krerrrrrk...', 'krrrrrrrk...', '.krrrrrk....', '..krrrk.....', '...krk......', '....k.r.....', '.....r.r....', '......r.r...', '.......rr...'],
   matches: ['..y...y.....', '.yoy.yoy....', '.krk.krk....', '..n...n.....', '..n...n.....', '..n...n.....', '..n...n.....', '..n...n.....', '..N...N.....', '............'],
 };
 
@@ -321,6 +357,27 @@ export function bosses() {
   hx.fillStyle = '#3a4a8a';
   [[12, 8, 20, 30], [40, 10, 34, 34], [27, 20, 27, 40]].forEach(([x0, y0, x1, y1]) => { for (let t = 0; t <= 1; t += 0.04) { const xx = Math.round(x0 + (x1 - x0) * t + Math.sin(t * 9) * 2), yy = Math.round(y0 + (y1 - y0) * t); hx.fillRect(xx, yy, 1, 1); } });
   B.aorta = blob(30, 14, (x, y) => (Math.abs(x - 9) < 4.5 || Math.abs(x - 21) < 4) && y > 1, ['#180206', '#3a2a6a', '#4a3a8a', '#6a5aaa', '#8a7ac4']);
+  // ---- the six organs beyond the heart
+  B.bileduke = blob(54, 44, (x, y) => Math.hypot((x - 27) / 25.5, (y - 23) / 20) < 1 + Math.sin(Math.atan2(y - 23, x - 27) * 7) * 0.05, ['#12060c', '#3a1e2e', '#56304a', '#7a4a66', '#a07090']);
+  stamp(B.bileduke, ['.kkk.', 'kyky.', '.kkk.'], 15, 14); stamp(B.bileduke, ['.kkk.', '.ykyk', '.kkk.'], 33, 14);
+  stamp(B.bileduke, ['kkkkkkkkkkkkkkkk', 'kgGgGgGgGgGgGgGk', '.kkkkkkkkkkkkkk.'], 19, 26);
+  [[10, 8], [42, 10], [26, 4], [8, 30], [46, 32]].forEach(([bx, by]) => stamp(B.bileduke, ['.gg.', 'geeg', '.gg.'], bx, by));
+  B.crownBile = paint(['k.k.k.k.k', 'kykykykyk', 'kyyyyyyyk', 'kgyyGyygk', 'kkkkkkkkk'], 9, 5);
+  B.kidney = blob(26, 32, (x, y) => Math.hypot((x - 12) / 11.5, (y - 16) / 15) < 1 && Math.hypot(x - 25, y - 16) > 7, ['#1a0c06', '#6a3424', '#8a4a34', '#b46e50', '#dca084']);
+  stamp(B.kidney, ['.kk..kk.', 'kwek.kwk', '.kk..kk.', '........', '.kkkkkk.', '.kwkwkk.'], 4, 9);
+  B.taster = blob(44, 34, (x, y) => { const inX = Math.abs(x - 22) < 20; return inX && (y < 18 || Math.hypot((x - 22) / 20, (y - 18) / 15) < 1); }, ['#2a0a12', '#a24a5e', '#c86a80', '#e88a9a', '#f8c0cc']);
+  { const g = B.taster.getContext('2d'); g.fillStyle = '#a24a5e'; for (let y = 2; y < 30; y++) g.fillRect(22, y, 1, 1); g.fillStyle = '#f8c0cc'; [[10, 8], [32, 9], [14, 20], [30, 22], [22, 27], [8, 15], [36, 16]].forEach(([dx, dy]) => g.fillRect(dx, dy, 2, 2)); }
+  stamp(B.taster, ['kkk....kkk', 'kek....kek', 'kkk....kkk'], 17, 4);
+  B.tongueStalk = blob(36, 8, (x, y) => Math.abs(x - 18) < 16, ['#2a0a12', '#a24a5e', '#c86a80', '#d87a8e', '#e88a9a']);
+  B.ganglion = blob(46, 46, (x, y) => { const a = Math.atan2(y - 23, x - 23), r = Math.hypot(x - 23, y - 23); return r < 13 + 7 * Math.max(0, Math.sin(a * 5)) ** 2 + 2; }, ['#08081a', '#2a2a5a', '#3e3e7a', '#6a6ab8', '#c8e8ff']);
+  stamp(B.ganglion, ['..kkkkk..', '.kccccck.', 'kcceeccck', 'kcceeccck', '.kccccck.', '..kkkkk..'], 19, 20);
+  B.optic = blob(48, 48, (x, y) => Math.hypot(x - 24, y - 24) < 22.5, ['#2a2a30', '#b0b0bc', '#d0d0da', '#eeeef4', '#ffffff'], 0.38, 0.32, 0.9);
+  { const g = B.optic.getContext('2d'); g.fillStyle = '#c02a3e'; [[4, 20, 14, 22], [44, 26, 34, 24], [24, 3, 22, 12], [10, 38, 17, 32], [38, 40, 32, 33]].forEach(([x0, y0, x1, y1]) => { for (let t = 0; t <= 1; t += 0.08) g.fillRect(Math.round(x0 + (x1 - x0) * t + Math.sin(t * 8)), Math.round(y0 + (y1 - y0) * t), 1, 1); }); }
+  B.lid = blob(48, 48, (x, y) => Math.hypot(x - 24, y - 24) < 22.5, ['#2a2a30', '#6a6a76', '#8a8a96', '#a8a8b4', '#c8c8d2']);
+  { const g = B.lid.getContext('2d'); g.fillStyle = '#2a2a30'; g.fillRect(4, 24, 40, 1); for (let i = 6; i < 44; i += 4) g.fillRect(i, 25, 1, 3); }
+  B.mind = blob(56, 42, (x, y) => Math.hypot((x - 28) / 26.5, (y - 22) / 19) < 1 + Math.sin(Math.atan2(y - 22, x - 28) * 9) * 0.035, ['#1a0e14', '#6a4e5a', '#8e6e7c', '#b494a2', '#dcc0cc']);
+  { const g = B.mind.getContext('2d'); g.fillStyle = '#6a4e5a'; for (let k = 0; k < 9; k++) { let fx = 8 + k * 5, fy = 6 + (k % 3) * 5; for (let t = 0; t < 26; t++) { fx += Math.sin(t * 0.7 + k) * 1.2; fy += 1; if (Math.hypot((fx - 28) / 25, (fy - 22) / 18) < 0.95) g.fillRect(fx | 0, fy | 0, 1, 1); } } g.fillStyle = '#4a2e3a'; for (let y = 4; y < 40; y++) g.fillRect(28, y, 1, 1); }
+  stamp(B.mind, ['.kkk......kkk.', 'kmemk....kmemk', '.kkk......kkk.'], 21, 24);
   bossArt = B;
   return B;
 }

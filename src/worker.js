@@ -1,11 +1,13 @@
 // Gullet server: serves the static game and relays co-op messages. One Durable Object per 4-letter
 // room code holds the host's and the guest's WebSockets and forwards everything between them.
 const CODE = 'ABCDEFGHJKMNPQRSTUVWXYZ';
-const json = (d, status = 200) => new Response(JSON.stringify(d), { status, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' } });
+// CORS is open on the API so the desktop app (app://gullet) can open rooms here.
+const json = (d, status = 200) => new Response(JSON.stringify(d), { status, headers: { 'content-type': 'application/json', 'cache-control': 'no-store', 'access-control-allow-origin': '*' } });
 
 export default {
   async fetch(req, env) {
     const url = new URL(req.url);
+    if (url.pathname === '/api/room' && req.method === 'OPTIONS') return new Response(null, { headers: { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'POST', 'access-control-max-age': '86400' } });
     if (url.pathname === '/api/room' && req.method === 'POST') {
       for (let i = 0; i < 12; i++) {
         let code = '';

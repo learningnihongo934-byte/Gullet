@@ -8,6 +8,11 @@ Play it at **https://gullet.rennko.tech**
 - **Room-by-room**: doors open when a room is clear. Wrapped caches are a free level: find them in treasure rooms and after bosses, buy them in shops (teeth) or at feeding altars (one heart).
 - **Level up, keep 1 of 3**: every kill feeds XP. Each level, once the room is clear, you pick one of three random items (150 in all, everything the tower swallowed). They stack into builds: piercing, homing, bouncing, splitting, burning, freezing, chain lightning, orbiting salt, garlic auras, wishbones that cheat death, shrapnel and more.
 - **The walls bite** if you hug them.
+- **Infinite mode**: past the heart lie the Liver, Kidneys, Tongue, Nerves, Eye and Brain, each with its own organ to stop. After that the tower loops, harder every time.
+- **38 monster types and 12 organs**, including snipers, bombers, healers, mine-layers, wall-crawlers, teleporters, summoners and a molar that pretends to be a tooth.
+- **12 weapons**: 6 to start with, plus 6 won by stopping each of the first six organs for the first time.
+- **The Index** records every card, monster, organ and weapon you have found.
+- **Desktop app** for Mac and Windows (fullscreen, works offline; co-op still goes online). Download it from [Releases](https://github.com/learningnihongo934-byte/Gullet/releases).
 - **Save and quit** any time; the climb resumes in the same room.
 - **Basecamp**: marrow you carry home buys permanent upgrades.
 - **Online co-op** for 2 players with a 4-letter room code. The host runs the game and the guest streams it.
@@ -38,6 +43,8 @@ Plain JavaScript modules with no build step.
 ./build.sh          # local dev server with co-op relay on :8830
 ./build.sh test     # syntax check + headless sim smoke test
 ./build.sh deploy   # deploy to Cloudflare
+./build.sh desktop  # run the desktop app
+./build.sh dist     # build the Mac .dmg and Windows .zip into dist/
 ```
 
 Made by **Virat Reddy Kaukuntla** ([@learningnihongo934-byte](https://github.com/learningnihongo934-byte))
