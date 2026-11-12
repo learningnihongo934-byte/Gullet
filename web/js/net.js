@@ -46,7 +46,7 @@ export class Mirror {
       const fresh = !p;
       if (!p) p = this.players[i] = { id: i, st: {} };
       Object.assign(p, { hp: q.hp, inv: q.inv, down: !!q.dn, face: q.f, moving: !!q.mv, anim: q.an, dashT: q.da ? 0.1 : 0, present: !!q.pr, shieldUp: !!q.sh, orbA: q.oa, items: q.it, pend: q.pd, offer: q.of });
-      p.st.maxhp = q.mh; p.st.orbit = q.ob; p.st.aura = q.au;
+      p.st.maxhp = q.mh; p.st.orbit = q.ob; p.st.aura = q.au; p.st.buddy = q.bd; p.weapon = q.wp;
       this.ptarget[i] = [q.x, q.y];
       if (fresh || Math.hypot(p.x - q.x, p.y - q.y) > 40) { p.x = q.x; p.y = q.y; }
     });
@@ -62,7 +62,7 @@ export class Mirror {
     });
     for (const id of this.target.keys()) if (!seen.has(id)) this.target.delete(id);
     const B = [];
-    for (let i = 0; i < s.B.length; i += 6) B.push({ x: s.B[i], y: s.B[i + 1], vx: s.B[i + 2], vy: s.B[i + 3], r: s.B[i + 4], k: s.B[i + 5], en: s.B[i + 5] !== 's' && s.B[i + 5] !== 'S' });
+    for (let i = 0; i < s.B.length; i += 7) B.push({ x: s.B[i], y: s.B[i + 1], vx: s.B[i + 2], vy: s.B[i + 3], r: s.B[i + 4], k: s.B[i + 5], en: !!s.B[i + 6] });
     this.bullets = B;
     this.pickups = s.K; this.hazards = s.H; this.valve = s.V;
   }

@@ -18,23 +18,43 @@
   <canvas id="cv" width="320" height="196"></canvas>
   <div id="ui">
     <section id="title" class="screen plate side">
+      <button id="seal" class="seal" title="What's new">New<b>1.4</b></button>
       <div class="plate-head"><span>Plate 0</span><span>On the Climbing of a Hungry Tower</span></div>
       <h1>Gullet</h1>
-      <p class="sub">The tower is alive, and it is hungry. Climb up its throat, stomach, lungs, bowels and spine, and reach its heart before it digests you.</p>
+      <p class="sub">The tower is alive, and it is hungry. Climb its throat, stomach, lungs, bowels and spine, keep what it swallowed, and stop its heart before it digests you.</p>
       <nav class="menu">
-        <button id="bContinue" class="hidden"><i>i.</i> Continue the climb</button>
+        <button id="bContinue" class="hidden"><i>i.</i> Continue the climb <small id="contWhere"></small></button>
         <button id="bNew"><i>ii.</i> New climb</button>
         <button id="bCoop"><i>iii.</i> Climb with a friend</button>
         <button id="bCamp"><i>iv.</i> Basecamp</button>
         <button id="bHelp"><i>v.</i> Field notes</button>
+        <button id="bLog"><i>vi.</i> Update log</button>
       </nav>
-      <p class="foot" id="metaLine"></p>
+      <dl class="ledger" id="ledger"></dl>
+      <p class="foot"><span id="verLine">Version 1.4</span><span>Made by Virat Reddy Kaukuntla</span></p>
+    </section>
+
+    <section id="arm" class="screen plate wide hidden">
+      <div class="plate-head"><span>Plate 0d</span><span>What the Climber Carries</span></div>
+      <h2>Choose your weapon</h2>
+      <p class="sub">Every card you keep builds on top of it. Your pick is remembered for next time.</p>
+      <p class="status" id="armWarn"></p>
+      <div id="weapons" class="weapons"></div>
+      <nav class="menu"><button data-back><i>&larr;</i> Back</button></nav>
+    </section>
+
+    <section id="log" class="screen plate wide hidden">
+      <div class="plate-head"><span>Appendix</span><span>A Record of Changes to the Tower</span></div>
+      <h2>Update log</h2>
+      <div id="logList" class="log"></div>
+      <nav class="menu"><button data-back><i>&larr;</i> Back</button></nav>
     </section>
 
     <section id="coop" class="screen plate hidden">
       <div class="plate-head"><span>Plate 0a</span><span>Two Climbers, One Rope</span></div>
       <h2>Climb with a friend</h2>
       <p class="sub">One of you opens a room and shares the four-letter code. The other joins with it. The host's computer runs the climb.</p>
+      <div class="armrow"><span>Your weapon:</span><div id="coopWeapons"></div></div>
       <div class="cols">
         <div>
           <h3>Host</h3>
@@ -69,7 +89,7 @@
         <dt>W A S D</dt><dd>Move</dd>
         <dt>Arrow keys, or hold the mouse</dt><dd>Throw salt. Salt is the only thing the tower is afraid of.</dd>
         <dt>Space or Shift</dt><dd>Dash. You can't be hit while dashing.</dd>
-        <dt>1 2 3</dt><dd>Pick a level-up card</dd>
+        <dt>1 2 3 (4 5)</dt><dd>Pick a level-up card</dd>
         <dt>Esc</dt><dd>Pause, see your items, save and quit</dd>
       </dl>
       <ul class="notes">
@@ -88,6 +108,7 @@
     <section id="pause" class="screen plate hidden">
       <div class="plate-head"><span>Interlude</span><span id="pauseWhere"></span></div>
       <h2>Paused</h2>
+      <p class="weapline" id="pauseWeapon"></p>
       <p class="sub" id="pauseNote"></p>
       <div id="itemList"></div>
       <nav class="menu">
@@ -111,7 +132,7 @@
       </nav>
     </section>
 
-    <div id="lvl" class="hidden"><div class="lvl-head">Level <b id="lvlNo"></b> &middot; keep one of three <span id="lvlMore"></span></div><div id="cards"></div></div>
+    <div id="lvl" class="hidden"><div class="lvl-head">Level <b id="lvlNo"></b> &middot; keep one of <span id="lvlOf">three</span> <span id="lvlMore"></span></div><div id="cards"></div></div>
     <div id="toast" class="hidden"></div>
     <div id="card" class="hidden"></div>
   </div>

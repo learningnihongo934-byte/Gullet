@@ -24,7 +24,7 @@ body { font-family: 'IM Fell English', Georgia, serif; }
   box-shadow: 0 0 0 calc(var(--s) * 3px) var(--paper2), 0 calc(var(--s) * 4px) calc(var(--s) * 10px) rgba(0,0,0,.6);
   font-size: calc(var(--s) * 5.2px); line-height: 1.35;
 }
-.plate.side { left: auto; right: 4%; transform: translate(0, -50%); width: min(56%, calc(var(--s) * 160px)); }
+.plate.side { left: auto; right: 4%; transform: translate(0, -50%); width: min(54%, calc(var(--s) * 152px)); }
 .plate-head { display: flex; justify-content: space-between; gap: 1em; font-family: 'IM Fell English SC', serif; font-size: .8em; color: var(--faint); border-bottom: 1px solid var(--faint); padding-bottom: .3em; margin-bottom: .6em; letter-spacing: .04em; }
 h1, h2, h3 { font-family: 'IM Fell English SC', serif; font-weight: 400; color: var(--red); margin: 0; }
 h1 { font-size: 3.4em; line-height: .95; letter-spacing: .02em; }
@@ -66,11 +66,48 @@ input#joinCode { font: inherit; font-family: 'IM Fell English SC', serif; font-s
 #itemList img { width: calc(var(--s) * 12px); height: calc(var(--s) * 12px); image-rendering: pixelated; }
 #itemList .who { font-family: 'IM Fell English SC', serif; color: var(--red); width: 100%; font-size: .9em; }
 
+.plate.wide { width: min(94%, calc(var(--s) * 250px)); }
+.seal { position: absolute; top: calc(var(--s) * -8px); left: calc(var(--s) * -8px); width: calc(var(--s) * 22px); height: calc(var(--s) * 22px); border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #b8323e, #7a1420 60%, #5a0c16); color: #f6e4c8; border: 0; cursor: pointer; pointer-events: auto;
+  font-family: 'IM Fell English SC', serif; font-size: calc(var(--s) * 3.2px); line-height: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  box-shadow: 0 2px 0 #3a0810, inset 0 0 0 2px rgba(255,220,200,.15); transform: rotate(-12deg); }
+.seal b { font-weight: 400; font-size: 1.5em; }
+.seal:hover { transform: rotate(-4deg) scale(1.06); }
+.seal.seen { opacity: .0; pointer-events: none; }
+.plate.side { overflow: visible; }
+.menu small { color: var(--faint); font-style: italic; font-size: .75em; margin-left: .4em; }
+.ledger { display: grid; grid-template-columns: repeat(4, 1fr); gap: .2em .6em; margin: .8em 0 0; border-top: 1px solid var(--faint); padding-top: .5em; text-align: center; }
+.ledger div { display: flex; flex-direction: column; }
+.ledger dt small { font-size: .55em; color: var(--faint); }
+.ledger dt { font-family: 'IM Fell English SC', serif; font-size: 1.35em; color: var(--red); line-height: 1; order: 0; }
+.ledger dd { margin: 0; font-size: .72em; color: var(--faint); font-style: italic; }
+.foot { display: flex; justify-content: space-between; gap: 1em; }
+.weapons { display: grid; grid-template-columns: repeat(3, 1fr); gap: .5em; margin: .3em 0 .5em; }
+.wcard { pointer-events: auto; cursor: pointer; text-align: left; font: inherit; color: var(--ink); background: rgba(255,255,255,.3); border: 1px solid var(--faint); padding: .45em .55em; display: grid; grid-template-columns: auto 1fr; gap: 0 .5em; }
+.wcard img { grid-row: 1 / span 3; width: calc(var(--s) * 16px); height: calc(var(--s) * 16px); image-rendering: pixelated; }
+.wcard b { font-family: 'IM Fell English SC', serif; font-weight: 400; color: var(--red); font-size: 1.15em; line-height: 1.05; }
+.wcard span { font-size: .85em; }
+.wcard em { font-size: .75em; color: var(--faint); }
+.wcard:hover, .wcard:focus-visible, .wcard.on { outline: 2px solid var(--red); outline-offset: 1px; background: rgba(255,255,255,.55); }
+.armrow { display: flex; align-items: center; gap: .6em; margin: .2em 0 .7em; flex-wrap: wrap; }
+.armrow span { font-family: 'IM Fell English SC', serif; }
+#coopWeapons { display: flex; gap: .3em; flex-wrap: wrap; }
+#coopWeapons button { pointer-events: auto; cursor: pointer; background: none; border: 1px solid var(--faint); padding: .15em; display: flex; }
+#coopWeapons button.on { border-color: var(--red); outline: 2px solid var(--red); }
+#coopWeapons img { width: calc(var(--s) * 11px); height: calc(var(--s) * 11px); image-rendering: pixelated; }
+.weapline { margin: -.2em 0 .4em; font-style: italic; }
+.log { max-height: calc(var(--s) * 120px); overflow: auto; padding-right: .4em; }
+.log article { border-bottom: 1px dotted var(--faint); padding: .3em 0 .5em; }
+.log h3 { color: var(--red); display: flex; justify-content: space-between; gap: 1em; }
+.log h3 small { font-family: 'IM Fell English', serif; font-style: italic; color: var(--faint); font-size: .75em; }
+.log ul { margin: .2em 0 0; padding-left: 1.1em; }
+.log li { margin: .1em 0; }
+@media (max-width: 700px) { .weapons { grid-template-columns: 1fr 1fr; } .ledger { grid-template-columns: 1fr 1fr; } }
 #lvl { position: absolute; left: 50%; bottom: 3%; transform: translateX(-50%); width: 96%; pointer-events: none; text-align: center; font-size: calc(var(--s) * 4.4px); }
 .lvl-head { display: inline-block; font-family: 'IM Fell English SC', serif; color: var(--paper); text-shadow: 0 2px 0 #000; font-size: 1.15em; margin-bottom: .35em; }
 .lvl-head b { color: #f2d15c; font-weight: 400; }
 #cards { display: flex; gap: 2%; justify-content: center; }
-.cardi { pointer-events: auto; cursor: pointer; flex: 0 1 31%; background: var(--paper); border: 1px solid var(--ink); outline: 2px double var(--ink); outline-offset: 2px; padding: .4em .6em .5em; text-align: left; font: inherit; color: var(--ink); display: grid; grid-template-columns: auto 1fr; gap: 0 .5em; box-shadow: 0 4px 14px rgba(0,0,0,.55); animation: deal .35s ease-out backwards; }
+.cardi { pointer-events: auto; cursor: pointer; flex: 1 1 0; max-width: 32%; background: var(--paper); border: 1px solid var(--ink); outline: 2px double var(--ink); outline-offset: 2px; padding: .4em .6em .5em; text-align: left; font: inherit; color: var(--ink); display: grid; grid-template-columns: auto 1fr; gap: 0 .5em; box-shadow: 0 4px 14px rgba(0,0,0,.55); animation: deal .35s ease-out backwards; }
 .cardi:nth-child(2) { animation-delay: .07s; } .cardi:nth-child(3) { animation-delay: .14s; }
 @keyframes deal { from { transform: translateY(40%); opacity: 0; } }
 .cardi:hover, .cardi:focus-visible { outline-color: var(--red); transform: translateY(-4%); }

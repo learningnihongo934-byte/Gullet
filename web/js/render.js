@@ -18,7 +18,7 @@ function dotSprite(r, fill, edge, hi) {
   }
   return c;
 }
-const BCOL = { s: ['#f6ecd9', '#5a4a52', '#ffffff'], S: ['#f6ecd9', '#5a4a52', '#ffffff'], b: ['#c8d44a', '#3a3a10', '#f0f4a0'], r: ['#d8304a', '#3a0810', '#ff9aa8'], n: ['#e8dcc0', '#3a2a1a', '#ffffff'] };
+const BCOL = { p: ['#e8603a', '#3a1008', '#ffb070'], g: ['#9a9284', '#2a2420', '#d8d0c0'], v: ['#d8e070', '#2a3010', '#ffffff'], w: ['#f6ecd9', '#3a2a1a', '#ffffff'], f: ['#f2a03a', '#3a1008', '#fff0a0'], s: ['#f6ecd9', '#5a4a52', '#ffffff'], S: ['#f6ecd9', '#5a4a52', '#ffffff'], b: ['#c8d44a', '#3a3a10', '#f0f4a0'], r: ['#d8304a', '#3a0810', '#ff9aa8'], n: ['#e8dcc0', '#3a2a1a', '#ffffff'] };
 
 export class Renderer {
   constructor(canvas) {
@@ -177,7 +177,9 @@ export class Renderer {
     for (const b of view.bullets) {
       const img = this.dot(b.k, b.r);
       if (!b.en && b.k !== 'n') this.shadow(b.x, b.y + 6, 2);
-      if (b.k === 'n') { x.fillStyle = '#1b0d12'; x.fillRect(Math.round(b.x) - 2, Math.round(b.y) - 2, 5, 5); x.fillStyle = '#e8dcc0'; const a = (this.t * 12) % 2 < 1; x.fillRect(Math.round(b.x) - (a ? 2 : 0), Math.round(b.y) - (a ? 0 : 2), a ? 4 : 1, a ? 1 : 4); x.fillRect(Math.round(b.x) - (a ? 0 : 1), Math.round(b.y) - (a ? 1 : 0), a ? 1 : 3, a ? 3 : 1); }
+      if (b.k === 'v' && !b.en) { const ph = Math.min(1, (b.t || 0) / 0.5); x.drawImage(img, Math.round(b.x - img.width / 2), Math.round(b.y - img.height / 2 - Math.sin(ph * Math.PI) * 10)); continue; }
+      if (b.k === 'f' && Math.random() < 0.3) this.parts.push({ x: b.x, y: b.y, vx: 0, vy: -20, c: '#f2d15c', life: 0.15, max: 0.15, size: 1 });
+      if (b.k === 'n' || b.k === 'w') { x.fillStyle = '#1b0d12'; x.fillRect(Math.round(b.x) - 2, Math.round(b.y) - 2, 5, 5); x.fillStyle = b.k === 'w' ? '#ffffff' : '#e8dcc0'; const a = (this.t * 12) % 2 < 1; x.fillRect(Math.round(b.x) - (a ? 2 : 0), Math.round(b.y) - (a ? 0 : 2), a ? 4 : 1, a ? 1 : 4); x.fillRect(Math.round(b.x) - (a ? 0 : 1), Math.round(b.y) - (a ? 1 : 0), a ? 1 : 3, a ? 3 : 1); }
       else x.drawImage(img, Math.round(b.x - img.width / 2), Math.round(b.y - img.height / 2));
     }
     this.drawParts(dt);
@@ -286,6 +288,11 @@ export class Renderer {
     } else if (h.k === 'spike') {
       x.fillStyle = '#1b0d12'; x.fillRect(Math.round(h.x) - 4, Math.round(h.y) - 7, 9, 9);
       x.fillStyle = '#f6ecd9'; for (let i = 0; i < 7; i++) x.fillRect(Math.round(h.x) - Math.floor((7 - i) / 2), Math.round(h.y) - 6 + i, 7 - (6 - i) + 1 > 0 ? Math.max(1, i) : 1, 1);
+    } else if (h.k === 'vin') {
+      const a = 1 - h.t / h.life, r = h.r * Math.min(1, h.t * 6);
+      x.fillStyle = `rgba(200,214,80,${0.25 + a * 0.3})`;
+      for (let j = -r; j <= r; j++) { const w = Math.round(Math.sqrt(Math.max(0, r * r - j * j))); x.fillRect(Math.round(h.x) - w, Math.round(h.y + j * 0.6), w * 2, 1); }
+      x.fillStyle = '#f0f4a0'; for (let i = 0; i < 3; i++) { const ph = (t * 1.5 + i * 0.33) % 1; x.fillRect(Math.round(h.x + Math.sin(i * 2.1 + h.x) * r * 0.6), Math.round(h.y + Math.cos(i * 1.7) * r * 0.35 - ph * 3), 1, 1); }
     } else if (h.k === 'fire') {
       const a = 1 - h.t / h.life;
       for (let i = 0; i < 3; i++) { x.fillStyle = i ? '#f2d15c' : '#e8873a'; x.fillRect(Math.round(h.x + Math.sin(t * 20 + i * 2 + h.x) * 3), Math.round(h.y - i * 2 - (t * 30 + i * 3) % 4), 2, 2 + (a > 0.5 ? 1 : 0)); }
@@ -333,6 +340,8 @@ export class Renderer {
     }
     if (p.shieldUp) { x.fillStyle = '#9ad8dc'; for (let a = 0; a < 12; a++) { const ang = a / 12 * Math.PI * 2 + t; x.fillRect(Math.round(p.x + Math.cos(ang) * 10), Math.round(p.y - 5 + Math.sin(ang) * 10), 1, 1); } }
     if (p.st.aura) { x.fillStyle = 'rgba(200,230,150,0.55)'; for (let a = 0; a < 28; a++) { const ang = a / 28 * Math.PI * 2 - t * 0.8; if ((a + Math.floor(t * 6)) % 3) x.fillRect(Math.round(p.x + Math.cos(ang) * 26), Math.round(p.y - 2 + Math.sin(ang) * 20), 1, 1); } }
+    const nb = p.st.buddy || 0, pets = (p.items || []).filter(id => id === 'frog' || id === 'rat' || id === 'ghost');
+    for (let i = 0; i < nb; i++) { const a = p.orbA * 0.5 + i * 2.1, bx = p.x + Math.cos(a) * 15, by = p.y - 6 + Math.sin(a) * 8 + Math.sin(t * 6 + i) * 1.5, img = SPR['i_' + (pets[i] || 'ghost')]; if (img) x.drawImage(img.c, Math.round(bx - 4), Math.round(by - 4), 8, 8); }
     const n = p.st.orbit || 0;
     for (let i = 0; i < n; i++) { const a = p.orbA + i * Math.PI * 2 / n, img = this.dot('s', 3.5); x.drawImage(img, Math.round(p.x + Math.cos(a) * 20 - img.width / 2), Math.round(p.y - 4 + Math.sin(a) * 20 - img.height / 2)); }
     if (view.coop) text(x, id === 0 ? '1' : '2', p.x, p.y - 21, id === 0 ? '#e58494' : '#9ad8dc', '#1b0d12', 'center');
@@ -485,38 +494,73 @@ export class Renderer {
     x.fillStyle = '#ff9aa8'; x.fillRect(bx, by, Math.round(w * Math.max(0, e.hp / e.max)), 1);
   }
 
-  // ---------- title scene: the tower, alive, with two tiny climbers at its mouth
+  // ---------- title scene: a night sky, the tower breathing and chewing, a climber on a rope
   drawTitle(dt) {
     this.t += dt;
     const x = this.x, t = this.t;
-    if (!this.towerArt) {
+    const BAY = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+    if (!this.titleSky) {
       const c = mk(W, H), g = c.getContext('2d');
-      const BAY = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
-      for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) { const v = j / H; g.fillStyle = v * 16 + (i % 7) * 0.1 > BAY[(j & 3) * 4 + (i & 3)] + 6 ? '#2a0810' : '#16040a'; g.fillRect(i, j, 1, 1); }
+      const bands = ['#0e0309', '#16050d', '#200711', '#2c0a16', '#3a0f1c'];
+      for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) { const v = j / H * (bands.length - 1) + (BAY[(j & 3) * 4 + (i & 3)] / 16 - 0.5) * 0.9; g.fillStyle = bands[Math.max(0, Math.min(bands.length - 1, Math.round(v)))]; g.fillRect(i, j, 1, 1); }
+      // moon
+      const mx = 134, my = 26;
+      for (let j = -22; j <= 22; j++) for (let i = -22; i <= 22; i++) { const d = Math.hypot(i, j); if (d < 14) { g.fillStyle = d > 12.5 ? '#c9a890' : (Math.hypot(i + 4, j - 3) < 3 || Math.hypot(i - 5, j + 4) < 2 || Math.hypot(i - 1, j + 7) < 1.5) ? '#d8bfa4' : '#ecdcc4'; g.fillRect(mx + i, my + j, 1, 1); } else if (d < 19 && BAY[((j + 32) & 3) * 4 + ((i + 32) & 3)] > (d - 6) * 0.9) { g.fillStyle = '#3a1820'; g.fillRect(mx + i, my + j, 1, 1); } }
+      // far towers
+      const far = (cx, w, h, col) => { g.fillStyle = col; for (let j = 0; j < h; j++) { const ww = Math.round(w * (0.6 + 0.4 * j / h) + Math.sin(j * 0.3) * 1.5); g.fillRect(cx - ww, H - j - 26, ww * 2, 1); } };
+      far(250, 9, 120, '#1a0610'); far(292, 7, 90, '#1a0610'); far(176, 6, 70, '#16050d'); far(8, 8, 100, '#1a0610');
+      // ground with bones
+      g.fillStyle = '#12040a'; for (let i = 0; i < W; i++) { const h = 26 + Math.round(Math.sin(i * 0.05) * 3 + Math.sin(i * 0.17) * 1.5); g.fillRect(i, H - h, 1, h); }
+      g.fillStyle = '#5a4a40'; [[30, 176], [150, 182], [220, 178], [270, 184], [300, 177]].forEach(([bx, by]) => { g.fillRect(bx, by, 6, 1); g.fillRect(bx - 1, by - 1, 2, 3); g.fillRect(bx + 5, by - 1, 2, 3); });
+      this.titleSky = c;
       const pal = ['#1b0d12', '#5a1d2a', '#7d2f3d', '#a8475a', '#d47488'];
-      const tower = blob(110, 190, (px, py) => {
-        const w = 26 + py * 0.14 + Math.sin(py * 0.12) * 4;
-        return Math.abs(px - 55) < w && py > 6 - Math.cos((px - 55) / w * 1.5) * 4;
-      }, pal, 0.3, 0.2, 1.2);
+      const tower = blob(112, 176, (px, py) => { const w = 25 + py * 0.15 + Math.sin(py * 0.11) * 5; return Math.abs(px - 56) < w && py > 8 - Math.cos((px - 56) / w * 1.5) * 6; }, pal, 0.3, 0.18, 1.2);
       const tg = tower.getContext('2d');
-      for (let s = 20; s < 190; s += 22) { tg.fillStyle = '#3a0f19'; for (let i = 0; i < 110; i++) { const w = 26 + s * 0.14; if (Math.abs(i - 55) < w - 2) tg.fillRect(i, s + Math.round(Math.sin(i * 0.2) * 2), 1, 1); } }
-      g.drawImage(tower, 30, 12);
-      // mouth at the base
-      g.fillStyle = '#0c0206'; g.fillRect(64, 168, 42, 22); g.fillStyle = '#f6ecd9';
-      for (let i = 0; i < 6; i++) { g.fillRect(66 + i * 7, 168, 4, 4); g.fillRect(67 + i * 7, 172, 2, 2); }
-      this.towerArt = c;
+      for (let sgm = 22; sgm < 176; sgm += 21) { tg.fillStyle = '#3a0f19'; for (let i = 0; i < 112; i++) { const w = 25 + sgm * 0.15; if (Math.abs(i - 56) < w - 3) tg.fillRect(i, sgm + Math.round(Math.sin(i * 0.2 + sgm) * 2), 1, 1); } }
+      tg.fillStyle = '#8a3747'; for (let v = 0; v < 5; v++) { let vx = 30 + v * 12, vy = 20; for (let k = 0; k < 120; k++) { vx += Math.sin(k * 0.3 + v) * 0.8; vy += 1; if (vy < 170 && tower.getContext('2d').getImageData(vx | 0, vy | 0, 1, 1).data[3]) tg.fillRect(vx | 0, vy | 0, 1, 1); } }
+      this.titleTower = tower;
     }
-    x.drawImage(this.towerArt, 0, 0);
-    // eyes along the tower that blink at different times
-    const eyes = [[72, 46], [98, 70], [64, 104], [104, 132], [80, 150]];
-    eyes.forEach(([ex, ey], i) => {
-      const blink = (t * 0.6 + i * 0.37) % 3 < 0.12;
-      x.fillStyle = '#1b0d12'; x.fillRect(ex - 3, ey - 2, 7, 5);
-      if (!blink) { x.fillStyle = '#f6ecd9'; x.fillRect(ex - 2, ey - 1, 5, 3); x.fillStyle = '#c02a3e'; x.fillRect(ex + Math.round(Math.sin(t + i)), ey - 1, 2, 3); }
+    x.drawImage(this.titleSky, 0, 0);
+    // stars
+    for (let i = 0; i < 40; i++) { const sx = (i * 73) % W, sy = (i * 37) % 90; if ((t * 0.7 + i * 0.13) % 3 < 2.6) { x.fillStyle = i % 5 ? '#6a4050' : '#d8bfa4'; x.fillRect(sx, sy, 1, 1); } }
+    // the tower breathes
+    const breath = Math.sin(t * 1.1), th = 176 + Math.round(breath * 2), tw = 112 + Math.round(breath * 1.5);
+    const tx = 82 - tw / 2, ty = H - 22 - th;
+    x.drawImage(this.titleTower, Math.round(tx), ty, tw, th);
+    // eyes that blink and follow the climber
+    const climbY = 118 + Math.sin(t * 0.5) * 34;
+    [[70, 40], [96, 64], [62, 96], [102, 122], [80, 140]].forEach(([ex, ey], i) => {
+      ey += ty + 2 - (H - 22 - 176);
+      const blink = (t * 0.6 + i * 0.37) % 3.2 < 0.12;
+      x.fillStyle = '#1b0d12'; x.fillRect(ex - 4, ey - 2, 9, 5);
+      if (!blink) { x.fillStyle = '#f6ecd9'; x.fillRect(ex - 3, ey - 1, 7, 3); const look = Math.max(-2, Math.min(2, Math.round((150 - ex) / 30))), lv = climbY < ey ? -1 : 0; x.fillStyle = '#c02a3e'; x.fillRect(ex + look, ey - 1 + (lv < 0 ? 0 : 1) - (lv < 0 ? 0 : 1), 2, 3); x.fillStyle = '#1b0d12'; x.fillRect(ex + look, ey, 1, 1); }
+      else { x.fillStyle = '#5a1d2a'; x.fillRect(ex - 3, ey, 7, 1); }
     });
-    // two climbers at the mouth
-    const frame = Math.floor(t * 4) % 2;
-    x.drawImage(SPR[frame ? 'p0v' : 'p0u'].c, 70, 172 - frame); x.drawImage(SPR[frame ? 'p1u' : 'p1v'].c, 88, 172 - (1 - frame));
+    // the mouth at the base chews
+    const chew = (t % 4.2) < 0.5 ? Math.abs(Math.sin((t % 4.2) / 0.5 * Math.PI)) : 0;
+    const mh = Math.round(16 - chew * 12), mxl = 60, mw = 44, myb = H - 24;
+    x.fillStyle = '#0c0206'; x.fillRect(mxl, myb - mh, mw, mh);
+    x.fillStyle = '#c45a70'; x.fillRect(mxl - 2, myb - mh - 2, mw + 4, 2); x.fillRect(mxl - 2, myb, mw + 4, 2);
+    for (let i = 0; i < 6; i++) { x.fillStyle = '#f6ecd9'; x.fillRect(mxl + 2 + i * 7, myb - mh, 5, 4); x.fillRect(mxl + 3 + i * 7, myb - mh + 4, 3, 2); x.fillRect(mxl + 5 + i * 7, myb - 4, 4, 4); x.fillStyle = '#c9b8a0'; x.fillRect(mxl + 6 + i * 7, myb - 2, 3, 2); }
+    // drool
+    if (!this.drips) this.drips = [];
+    if (Math.random() < dt * 1.5) this.drips.push({ x: mxl + 4 + Math.random() * (mw - 8), y: myb, v: 0 });
+    for (const d of this.drips) { d.v += dt * 60; d.y += d.v * dt; x.fillStyle = '#bcd04a'; x.fillRect(Math.round(d.x), Math.round(d.y), 1, 2); }
+    this.drips = this.drips.filter(d => d.y < H);
+    // a rope out of a window, with a climber going up
+    const wx = 120, wy = ty + 30;
+    x.fillStyle = '#0c0206'; x.fillRect(wx - 4, wy - 5, 9, 9); x.fillStyle = '#f2d15c'; x.fillRect(wx - 3, wy - 4, 7, 7); x.fillStyle = '#e8873a'; x.fillRect(wx - 3, wy + 1, 7, 2);
+    const sway = Math.sin(t * 0.9) * 3;
+    for (let ry = wy + 4; ry < H - 24; ry++) { const k = (ry - wy) / (H - 24 - wy); x.fillStyle = (ry & 3) ? '#8a5a3a' : '#4e3020'; x.fillRect(Math.round(wx + 2 + sway * k), ry, 1, 1); }
+    const ck = (climbY - wy) / (H - 24 - wy), frame = Math.floor(t * 5) % 2;
+    x.drawImage(SPR[frame ? 'p0v' : 'p0u'].c, Math.round(wx + 2 + sway * ck - 8), Math.round(climbY - 10));
+    // the second climber waits at the bottom, waving
+    x.drawImage(SPR[Math.floor(t * 2) % 2 ? 'p1a' : 'p1b'].c, 132, H - 38);
+    // embers rising
+    if (!this.embers) this.embers = [];
+    if (Math.random() < dt * 8) this.embers.push({ x: Math.random() * W, y: H, vx: (Math.random() - 0.5) * 6, vy: -8 - Math.random() * 14, life: 6 });
+    for (const e of this.embers) { e.x += (e.vx + Math.sin(t + e.y * 0.05) * 4) * dt; e.y += e.vy * dt; e.life -= dt; x.fillStyle = e.life > 3 ? '#e8873a' : '#8a3a2a'; x.fillRect(Math.round(e.x), Math.round(e.y), 1, 1); }
+    this.embers = this.embers.filter(e => e.life > 0 && e.y > 0);
     x.drawImage(this.vig, 0, 0);
   }
 }

@@ -53,7 +53,10 @@ export function baseStats() {
     map: 0, prism: 0, candle: 0,
     vamp: 0, slowHit: 0, hook: 0, slowBullets: 0, revive: 0, bomb: 0, dashSpeed: 1, dashBurst: 0, hurtFreeze: 0, hurtBurst: 0,
     teethMul: 1, teethDrop: 0, piggy: 0, sizeUp: 0, twin: 0, back: 0, pinwheel: 0, acidproof: 0, critMul: 2.5, rage: 0, fragile: 0,
-    wiggle: 0, capTeeth: 0, clearHeal: 0, bossDmg: 0, orbitDmg: 1, entryBlast: 0, eraser: 0, wallBurst: 0, aura: 0 };
+    wiggle: 0, capTeeth: 0, clearHeal: 0, bossDmg: 0, orbitDmg: 1, entryBlast: 0, eraser: 0, wallBurst: 0, aura: 0,
+    thorns: 0, dodge: 0, slowAll: 0, lvlHeal: 0, opener: 0, execute: 0, collector: 0, xpMul: 1, choices: 0, dashReset: 0, biteproof: 0,
+    phase: 0, accel: 0, buddy: 0, splash: 0, still: 0, panic: 0, combo: 0, interest: 0, healMul: 1, bossHp: 0, weaken: 0, bossCut: 0,
+    finisher: 0, deathBurst: 0 };
 }
 
 // Items: everything here is something the tower swallowed. f = flavour line shown on pickup.
@@ -143,7 +146,85 @@ export const ITEMS = [
   { id: 'popper', name: 'Party Popper', desc: 'Entering a fight blasts every enemy', f: 'Surprise!', apply: s => { s.entryBlast += 1; } },
   { id: 'toothbrush', name: 'Toothbrush', desc: 'Salt wipes out enemy shots', f: 'The tower has never once brushed.', apply: s => { s.eraser = 1; s.shotSpeed += 15; } },
   { id: 'shrapnel', name: 'Shrapnel', desc: 'Salt bursts into shards when it hits a wall', f: 'Bits of something that exploded long ago.', apply: s => { s.wallBurst += 1; } },
+  // ---- third batch
+  { id: 'anchor', name: "Ship's Anchor", desc: '+2 damage, slower', f: 'The ship is down here too, somewhere.', apply: s => { s.dmg += 2; s.speed -= 10; } },
+  { id: 'whistle', name: 'Tin Whistle', desc: 'Throw 12% faster, +range', f: 'One blow and the walls flinch.', apply: s => { s.fire *= 0.88; s.range += 0.1; } },
+  { id: 'jellybean', name: 'Jelly Bean', desc: 'A random small boost', f: 'Flavour: unknown. Colour: also unknown.', apply: s => { const r = Math.floor(Math.random() * 4); if (r === 0) s.dmg += 0.6; else if (r === 1) s.fire *= 0.92; else if (r === 2) s.speed += 6; else s.luck += 1; } },
+  { id: 'sock', name: 'Lost Sock', desc: '+speed, +1 luck', f: 'So this is where they go.', apply: s => { s.speed += 8; s.luck += 1; } },
+  { id: 'spectacles', name: 'Spectacles', desc: '+range, +shot speed', f: 'Now you can see exactly how bad it is.', apply: s => { s.range += 0.25; s.shotSpeed += 25; } },
+  { id: 'bouncyball', name: 'Bouncy Ball', desc: 'Salt bounces twice more, +shot speed', f: 'Has not stopped bouncing in forty years.', apply: s => { s.bounce += 2; s.shotSpeed += 20; } },
+  { id: 'cactus', name: 'Cactus Spine', desc: 'Enemies that touch you get hurt', f: 'The tower swallowed a whole desert once.', apply: s => { s.thorns += 1; } },
+  { id: 'pocketknife', name: 'Pocket Knife', desc: '+1.2 damage, +5% crit', f: 'Seven tools. Only one matters.', apply: s => { s.dmg += 1.2; s.crit += 0.05; } },
+  { id: 'carbattery', name: 'Car Battery', desc: 'Hits arc twice as far, throw a bit slower', f: 'Twelve volts of bad idea.', apply: s => { s.chain += 2; s.fire *= 1.1; } },
+  { id: 'teacup', name: 'Teacup', desc: '+1 heart, full heal', f: 'Still warm. Do not ask from what.', apply: (s, p) => { s.maxhp += 2; if (p) p.hp = s.maxhp; } },
+  { id: 'hambone', name: 'Ham Bone', desc: '+1 heart, +0.5 damage', f: 'Gnawed clean. Not by you.', apply: (s, p) => { s.maxhp += 2; s.dmg += 0.5; if (p) p.hp += 2; } },
+  { id: 'locket', name: 'Locket', desc: '10% chance to shrug off a hit', f: 'The photo inside is of you.', apply: s => { s.dodge += 0.1; } },
+  { id: 'cape', name: 'Torn Cape', desc: '8% chance to shrug off a hit, +speed', f: 'A hero wore it in. Nobody wore it out.', apply: s => { s.dodge += 0.08; s.speed += 6; } },
+  { id: 'lantern', name: 'Oil Lantern', desc: 'Salt burns, +range', f: 'The only light some of these rooms have ever seen.', apply: s => { s.burn += 1; s.range += 0.1; } },
+  { id: 'gardensnail', name: 'Garden Snail', desc: 'Every enemy moves 10% slower', f: 'Slowness is contagious.', apply: s => { s.slowAll += 0.1; } },
+  { id: 'metronome', name: 'Metronome', desc: 'Dash recharges faster, throw a bit faster', f: 'Ticks in time with the heart.', apply: s => { s.dashCD *= 0.8; s.fire *= 0.95; } },
+  { id: 'crayon', name: 'Red Crayon', desc: '+0.8 damage, bigger salt', f: 'Someone drew a door on the wall. It did not open.', apply: s => { s.dmg += 0.8; s.sizeUp += 0.5; } },
+  { id: 'sticker', name: 'Lightning Sticker', desc: 'Hits can arc, +5% crit', f: 'Peeled off a lunchbox.', apply: s => { s.chain += 1; s.crit += 0.05; } },
+  { id: 'wand', name: 'Fairy Wand', desc: 'Level-ups heal you, +1 luck', f: 'Leaves a tooth. Takes a tooth.', apply: s => { s.lvlHeal += 1; s.luck += 1; } },
+  { id: 'dentures', name: 'Dentures', desc: 'Your first hit on each enemy does double', f: 'Bite first. Ask later.', apply: s => { s.opener += 1; } },
+  { id: 'cleaver', name: 'Cleaver', desc: 'Finish off enemies under 15% health', f: 'The butcher was very thorough.', apply: s => { s.execute = Math.min(0.3, s.execute + 0.15); } },
+  { id: 'album', name: "Collector's Album", desc: '+4% damage for every item you hold', f: 'Every page a little piece of the tower.', apply: s => { s.collector += 0.04; } },
+  { id: 'sundial', name: 'Sundial', desc: '+25% XP', f: 'No sun in here. It works anyway.', apply: s => { s.xpMul += 0.25; } },
+  { id: 'deck', name: 'Deck of Cards', desc: 'Level-ups show one more card', f: 'Fifty-two cards and a joker that bites.', apply: s => { s.choices = Math.min(2, s.choices + 1); } },
+  { id: 'alarm', name: 'Alarm Clock', desc: 'Kills reset your dash', f: 'Rings at the worst possible moment. On purpose.', apply: s => { s.dashReset = 1; } },
+  { id: 'helmet', name: 'Bike Helmet', desc: 'Walls can\'t bite you, +1 heart', f: 'Safety first, even in a stomach.', apply: (s, p) => { s.biteproof = 1; s.maxhp += 2; if (p) p.hp += 2; } },
+  { id: 'rainboots', name: 'Rain Boots', desc: 'Acid can\'t hurt you, +speed', f: 'Puddle-proof. Bile-proof. Mostly.', apply: s => { s.acidproof = 1; s.speed += 4; } },
+  { id: 'umbrella', name: 'Umbrella', desc: 'Block one more hit in each room', f: 'Opened indoors. That is how it got here.', apply: (s, p) => { s.shield += 1; if (p) p.shields = s.shield; } },
+  { id: 'vitamins', name: 'Vitamins', desc: '+1 heart, +0.3 damage, +speed', f: 'Chewable. The tower chewed.', apply: (s, p) => { s.maxhp += 2; s.dmg += 0.3; s.speed += 4; if (p) p.hp += 2; } },
+  { id: 'ghostcandle', name: 'Ghost Candle', desc: 'Salt passes through lumps and teeth', f: 'Its flame leans toward the walls.', apply: s => { s.phase = 1; } },
+  { id: 'handfan', name: 'Hand Fan', desc: 'Salt speeds up as it flies', f: 'Fans the flames. Fans everything.', apply: s => { s.accel += 1; } },
+  { id: 'tar', name: 'Tar Ball', desc: 'Hits slow enemies, +0.4 damage', f: 'Sticks to everything, especially regrets.', apply: s => { s.slowHit += 1; s.dmg += 0.4; } },
+  { id: 'frog', name: 'Frog in a Jar', desc: 'A frog follows you and spits salt', f: 'It was swallowed before. It is used to this.', apply: s => { s.buddy += 1; } },
+  { id: 'rat', name: 'Pet Rat', desc: 'A rat follows you and throws salt', f: 'Knows every shortcut in the tower.', apply: s => { s.buddy += 1; } },
+  { id: 'ghost', name: 'Tiny Ghost', desc: 'A ghost follows you and throws salt, 5% dodge', f: 'A climber who never left. Friendly, mostly.', apply: s => { s.buddy += 1; s.dodge += 0.05; } },
+  { id: 'crow', name: 'Crow Feather', desc: 'Salt seeks enemies, +speed', f: 'Crows know where the bodies are.', apply: s => { s.homing += 0.7; s.speed += 5; } },
+  { id: 'lens', name: 'Contact Lens', desc: '+8% crit, +range', f: 'Fell out. Saw everything on the way down.', apply: s => { s.crit += 0.08; s.range += 0.1; } },
+  { id: 'pinecone', name: 'Pinecone', desc: 'Every hit splashes nearby enemies', f: 'Opens in heat. It is very hot in here.', apply: s => { s.splash += 1; } },
+  { id: 'hotsauce', name: 'Hot Sauce', desc: 'Salt burns, throw a bit faster', f: 'The label just says NO.', apply: s => { s.burn += 1; s.fire *= 0.95; } },
+  { id: 'venom', name: 'Snake Venom', desc: 'Salt poisons heavily', f: 'The snake lost the fight. The venom won.', apply: s => { s.poison += 1.5; } },
+  { id: 'knuckles', name: 'Brass Knuckles', desc: '+1 damage, big knockback, less range', f: 'For close conversations.', apply: s => { s.dmg += 1; s.knock += 1; s.range -= 0.1; } },
+  { id: 'skate', name: 'Roller Skate', desc: '+speed, dash farther', f: 'One skate. The other one is in a lung.', apply: s => { s.speed += 16; s.dashSpeed *= 1.15; } },
+  { id: 'eggtimer', name: 'Egg Timer', desc: '+40% damage while standing still', f: 'Three minutes. Then something hatches.', apply: s => { s.still += 0.4; } },
+  { id: 'panic', name: 'Panic Button', desc: '+40% speed at 1 heart or less', f: 'Press in case of digestion.', apply: s => { s.panic += 0.4; } },
+  { id: 'trophy', name: 'Trophy', desc: '+25% damage to organs, +1 luck', f: 'Participation award. You are participating.', apply: s => { s.bossDmg += 0.25; s.luck += 1; } },
+  { id: 'ribbon', name: 'Prize Ribbon', desc: 'Clear a room without getting hit: +8% damage (up to +40%)', f: 'First place in not being eaten.', apply: s => { s.combo += 0.08; } },
+  { id: 'purse', name: 'Coin Purse', desc: 'Clearing a room pays 1 tooth per 10 you carry', f: 'Teeth earn teeth. That is how the tower got so many.', apply: s => { s.interest += 1; } },
+  { id: 'firstaid', name: 'First Aid Tin', desc: 'Hearts you pick up heal double', f: 'Expired, but the thought counts.', apply: s => { s.healMul = 2; } },
+  { id: 'candyheart', name: 'Candy Heart', desc: 'Every organ you stop gives +1 heart', f: 'Says BE MINE. The tower already decided you are.', apply: s => { s.bossHp += 1; } },
+  { id: 'broom', name: 'Broom', desc: 'Huge knockback, bigger salt', f: 'Sweeps things back where they came from.', apply: s => { s.knock += 1.5; s.sizeUp += 0.5; } },
+  { id: 'lightbulb', name: 'Light Bulb', desc: 'Enemies show up 15% weaker', f: 'Things are less scary in the light.', apply: s => { s.weaken = Math.min(0.4, s.weaken + 0.15); } },
+  { id: 'scissors', name: 'Scissors', desc: 'Organs start with 10% less health', f: 'Snip.', apply: s => { s.bossCut = Math.min(0.3, s.bossCut + 0.1); } },
+  { id: 'horseshoe', name: 'Horseshoe', desc: '+2 luck, pickups fly to you', f: 'Nailed above a door that is now a throat.', apply: s => { s.luck += 2; s.magnet += 1; } },
+  { id: 'bubblewrap', name: 'Bubble Wrap', desc: 'Block a hit each room, 5% dodge', f: 'Pop one every time you are scared. You will run out.', apply: (s, p) => { s.shield += 1; s.dodge += 0.05; if (p) p.shields = s.shield; } },
+  { id: 'cheese', name: 'Moldy Cheese', desc: 'Salt poisons, +1 heart', f: 'Aged in a stomach. Very exclusive.', apply: (s, p) => { s.poison += 1; s.maxhp += 2; if (p) p.hp += 2; } },
+  { id: 'glue', name: 'Glue Stick', desc: 'Hits slow enemies, +range', f: 'Holds anything together except your nerves.', apply: s => { s.slowHit += 1; s.range += 0.15; } },
+  { id: 'dynamite', name: 'Dynamite', desc: 'Enemies explode on death; every 6th throw explodes', f: 'Fuse: short. Patience: shorter.', apply: s => { s.explode += 1; s.bomb += 1; } },
+  { id: 'snowflake', name: 'Snowflake', desc: 'Hits can freeze and slow', f: 'Unique, like every other one.', apply: s => { s.stun += 0.1; s.slowHit += 0.5; } },
+  { id: 'discoball', name: 'Disco Ball', desc: 'Salt splits mid-air, +5% crit', f: 'Spins to a beat nobody else can hear.', apply: s => { s.prism += 1; s.crit += 0.05; } },
+  { id: 'pogo', name: 'Pogo Stick', desc: 'Dashing leaves fire, dash recharges faster', f: 'Boing. Burn. Boing.', apply: s => { s.candle += 1; s.dashCD *= 0.9; } },
+  { id: 'lighter', name: 'Lighter', desc: 'Salt burns; dashing leaves fire', f: 'Flick. The tower flinches.', apply: s => { s.burn += 1; s.candle += 1; } },
+  { id: 'kazoo', name: 'Kazoo', desc: 'Level-ups heal you, +10% XP', f: 'Plays one note: victory, sort of.', apply: s => { s.lvlHeal += 1; s.xpMul += 0.1; } },
+  { id: 'shovel', name: 'Shovel', desc: '+50% damage to enemies under half health', f: 'Dig them a little deeper.', apply: s => { s.finisher += 0.5; } },
+  { id: 'jaroteeth', name: 'Jar of Teeth', desc: '+15 teeth, shops 15% cheaper', f: 'Someone was collecting. Someone was the tower.', apply: (s, p, g) => { s.discount = Math.min(0.6, s.discount + 0.15); if (g) g.teeth += 15; } },
+  { id: 'antenna', name: 'Antenna', desc: 'Salt seeks enemies, hits can arc', f: 'Picks up a station that only plays heartbeats.', apply: s => { s.homing += 1; s.chain += 0.5; } },
+  { id: 'boneflute', name: 'Bone Flute', desc: 'Enemies burst into bone shards when they die', f: 'Plays the song of the last thing that died.', apply: s => { s.deathBurst += 1; } },
 ];
+
+// Starting weapons, picked before each climb.
+export const WEAPONS = [
+  { id: 'salt', name: 'Salt', desc: 'Balanced throws. The tower hates it.', stats: 'Even damage, rate and range', apply: () => {} },
+  { id: 'pepper', name: 'Pepper Spray', desc: 'A short cone of five stinging specks. Shreds anything up close.', stats: '5 specks, short range, fast', apply: s => { s.fire *= 0.85; s.range *= 0.42; s.shotSpeed *= 1.1; } },
+  { id: 'sling', name: 'Pebble Sling', desc: 'Slow, heavy stones that knock enemies back and punch through.', stats: 'Huge damage, slow, pierces', apply: s => { s.fire *= 1.8; s.dmg *= 2.3; s.pierce += 1; s.knock += 1; s.shotSpeed *= 0.9; } },
+  { id: 'vinegar', name: 'Vinegar Flask', desc: 'Lobbed flasks that burst into a burning puddle where they land.', stats: 'Area damage over time, slow', apply: s => { s.fire *= 1.35; s.dmg *= 1.2; s.shotSpeed *= 0.75; } },
+  { id: 'boomerang', name: 'Bone Boomerang', desc: 'Always comes back, and cuts through everything on the way.', stats: 'Returns, pierces 3, slower', apply: s => { s.boomer = 1; s.pierce += 3; s.fire *= 1.4; s.dmg *= 1.45; s.range += 0.15; } },
+  { id: 'matches', name: 'Matchsticks', desc: 'Rapid little flames that set whatever they touch burning.', stats: 'Very fast, weak, burns', apply: s => { s.fire *= 0.55; s.dmg *= 0.55; s.burn += 1; } },
+];
+export const WEAPON = Object.fromEntries(WEAPONS.map(w => [w.id, w]));
 export const ITEM = Object.fromEntries(ITEMS.map(i => [i.id, i]));
 
 // Basecamp upgrades, bought with marrow between climbs.
@@ -162,5 +243,6 @@ export function statsFor(meta) {
   const s = baseStats();
   const up = (meta && meta.up) || {};
   for (const u of UPGRADES) if (up[u.id]) u.apply(s, up[u.id]);
+  (WEAPON[meta && meta.weapon] || WEAPON.salt).apply(s);
   return s;
 }

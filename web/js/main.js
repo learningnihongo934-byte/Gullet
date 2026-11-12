@@ -1,5 +1,5 @@
 // Gullet: menus, input, saving, the game loop, and co-op wiring.
-import { W, H, FLOORS, ITEM, UPGRADES, BOSSES } from './data.js';
+import { W, H, FLOORS, ITEM, ITEMS, UPGRADES, BOSSES, WEAPONS, WEAPON } from './data.js';
 import { buildSprites, SPR } from './sprites.js';
 import { Game } from './sim.js';
 import { Renderer } from './render.js';
@@ -18,7 +18,15 @@ const store = {
   del(k) { try { localStorage.removeItem(k); } catch {} },
 };
 const META = 'gullet.meta', RUN = 'gullet.run';
-const meta = Object.assign({ marrow: 0, up: {}, stats: { climbs: 0, wins: 0, best: 0, kills: 0 }, prefs: { music: true, sfx: true } }, store.get(META, {}));
+const meta = Object.assign({ marrow: 0, up: {}, stats: { climbs: 0, wins: 0, best: 0, kills: 0, organs: 0 }, prefs: { music: true, sfx: true }, weapon: 'salt', seenLog: '', found: [] }, store.get(META, {}));
+const VERSION = '1.4';
+const LOG = [
+  { v: '1.4', date: 'November 12, 2026', notes: ['66 new cards: 150 in all. New ones bring pets that follow you and shoot, thorns, dodging, a Deck of Cards that shows extra choices, finishing blows, damage streaks, XP boosts and bone shards that burst out of dead enemies.', 'Starting weapons: Salt, Pepper Spray, Pebble Sling, Vinegar Flask, Bone Boomerang and Matchsticks. Pick one before each climb. In co-op, each climber picks their own.', 'A new title screen: the tower breathes, chews and watches you climb.', 'Your collection: the title screen counts how many of the 150 cards you have ever kept.', 'This update log.'] },
+  { v: '1.3', date: 'November 12, 2026', notes: ['50 new cards (84 in all), including the Wishbone, Snow Globe, Garlic Clove, Fishhook, Shrapnel and Toothbrush.', 'Each card has its own hand-drawn sprite.'] },
+  { v: '1.2', date: 'November 12, 2026', notes: ['Dashing makes you completely untouchable. Shots pass straight through you.', 'A short grace window after each dash, so you can\'t get clipped coming out of it.', 'You can dash while standing still. You go the way you are facing.'] },
+  { v: '1.1', date: 'November 12, 2026', notes: ['Items now come from levelling up. Every kill feeds XP, and each level you keep one of three cards once the room is clear.', 'Treasure rooms, shops, feeding altars and bosses give wrapped caches: a free level each.'] },
+  { v: '1.0', date: 'November 11, 2026', notes: ['The first climb: six floors, six organs that fight back, rooms that bite, save and quit, Basecamp grafts and online co-op for two.'] },
+];
 const saveMeta = () => store.set(META, meta);
 setPrefs(meta.prefs.music, meta.prefs.sfx);
 
@@ -46,7 +54,7 @@ addEventListener('keydown', e => {
   if (!keys.has(k) && (k === ' ' || k === 'shift')) { dashEdge = true; dashSeq++; }
   keys.add(k);
   if (k === 'escape' && mode !== 'menu') togglePause();
-  if (['1', '2', '3'].includes(k) && !paused) pickCard(+k - 1);
+  if (['1', '2', '3', '4', '5'].includes(k) && !paused) pickCard(+k - 1);
 });
 addEventListener('keyup', e => keys.delete(e.key.toLowerCase()));
 addEventListener('blur', () => { keys.clear(); mouse.down = false; if (mode === 'solo' && !paused) togglePause(); });
@@ -70,7 +78,7 @@ function readInput(view, me) {
 // ---------- screens
 let mode = 'menu', paused = false, game = null, mirror = null, net = null;
 let guestMeta = null, guestIn = {}, lastGuestDs = 0, snapT = 0, roomT = 0, pendingEv = [], endShown = false;
-const screens = ['title', 'coop', 'camp', 'help', 'pause', 'end'];
+const screens = ['title', 'coop', 'camp', 'help', 'pause', 'end', 'arm', 'log'];
 function show(id) {
   for (const s of screens) $('#' + s).classList.toggle('hidden', s !== id);
   if (id === 'title') refreshTitle();
@@ -84,12 +92,45 @@ function refreshTitle() {
   const RN = ['i.', 'ii.', 'iii.', 'iv.', 'v.', 'vi.'];
   [...document.querySelectorAll('#title .menu button:not(.hidden) i')].forEach((el, n) => { el.textContent = RN[n]; });
   const st = meta.stats;
-  $('#metaLine').textContent = `${meta.marrow} marrow at basecamp · ${st.climbs} climbs · deepest: ${st.best ? 'Plate ' + FLOORS[Math.min(5, st.best - 1)].plate : 'none yet'}${st.wins ? ' · reached the heart ' + st.wins + '×' : ''}`;
+  $('#contWhere').textContent = run && !run.coop ? `Plate ${FLOORS[run.fi].plate}, level ${run.level || 1}` : '';
+  const cell = (v, l) => `<div><dt>${v}</dt><dd>${l}</dd></div>`;
+  $('#ledger').innerHTML = cell(st.climbs, 'climbs') + cell(st.best ? FLOORS[Math.min(5, st.best - 1)].plate : '–', 'deepest plate') + cell(st.organs || 0, 'organs stopped') + cell(`${(meta.found || []).length}<small>/${ITEMS.length}</small>`, 'cards kept') + (st.wins ? '' : '');
+  $('#seal').classList.toggle('seen', meta.seenLog === VERSION);
+  $('#verLine').textContent = `Version ${VERSION} · ${meta.marrow} marrow`;
 }
 document.querySelectorAll('[data-back]').forEach(b => b.onclick = () => { if (net && mode === 'menu') { net.close(); net = null; } show('title'); });
-$('#bNew').onclick = () => { initAudio(); if (store.get(RUN, null) && !confirm('Start over? Your saved climb will be lost.')) return; store.del(RUN); startSolo(null); };
+$('#bNew').onclick = () => {
+  initAudio(); renderWeapons();
+  const run = store.get(RUN, null);
+  $('#armWarn').textContent = run && !run.coop ? `Starting a new climb replaces your saved one (Plate ${FLOORS[run.fi].plate}, level ${run.level || 1}).` : '';
+  show('arm');
+};
+function renderWeapons() {
+  const box = $('#weapons'); box.innerHTML = '';
+  for (const w of WEAPONS) {
+    const b = document.createElement('button'); b.className = 'wcard' + (meta.weapon === w.id ? ' on' : '');
+    b.innerHTML = `<img alt="" src="${SPR['w_' + w.id].c.toDataURL()}"><b>${w.name}</b><span>${w.desc}</span><em>${w.stats}</em>`;
+    b.onclick = () => { meta.weapon = w.id; saveMeta(); store.del(RUN); startSolo(null); };
+    box.appendChild(b);
+  }
+}
+function renderCoopWeapons() {
+  const box = $('#coopWeapons'); box.innerHTML = '';
+  for (const w of WEAPONS) {
+    const b = document.createElement('button'); b.title = `${w.name}: ${w.stats}`; b.className = meta.weapon === w.id ? 'on' : '';
+    b.innerHTML = `<img alt="${w.name}" src="${SPR['w_' + w.id].c.toDataURL()}">`;
+    b.onclick = () => { meta.weapon = w.id; saveMeta(); renderCoopWeapons(); if (net && net.role === 'guest') net.send({ t: 'hello', meta: { up: meta.up, weapon: meta.weapon } }); };
+    box.appendChild(b);
+  }
+}
+$('#bLog').onclick = () => openLog();
+$('#seal').onclick = () => openLog();
+function openLog() {
+  $('#logList').innerHTML = LOG.map(e => `<article><h3>Version ${e.v} <small>${e.date}</small></h3><ul>${e.notes.map(n => `<li>${n}</li>`).join('')}</ul></article>`).join('');
+  meta.seenLog = VERSION; saveMeta(); show('log');
+}
 $('#bContinue').onclick = () => { initAudio(); const run = store.get(RUN, null); if (run) startSolo(run); };
-$('#bCoop').onclick = () => { show('coop'); resetLobby(); };
+$('#bCoop').onclick = () => { show('coop'); resetLobby(); renderCoopWeapons(); };
 $('#bCamp').onclick = () => show('camp');
 $('#bHelp').onclick = () => show('help');
 
@@ -129,6 +170,7 @@ function handleEvents(view, evs) {
   for (const e of evs) {
     R.fx(view, e);
     if (SFX[e.k]) sfx(SFX[e.k]);
+    if (e.k === 'item' && e.p === view.me && !(meta.found || []).includes(e.id)) { (meta.found = meta.found || []).push(e.id); saveMeta(); }
     if (e.k === 'item' && !(mode === 'guest' && e.p === 1)) itemToast(e.id, view.coop ? (e.p === view.me ? 'you kept' : 'your partner kept') : '');
     if (e.k === 'toast') toast(`<div class="ds">${e.text}</div>`, 1800);
     if (e.k === 'boss') { card(e.plate, e.name, ''); setMusic(view.fi, true); }
@@ -164,7 +206,7 @@ function finishRun() {
   const won = game.state === 'won';
   const earned = game.marrow + game.fi * 8 + Math.floor(game.kills / 5) + (won ? 60 : 0);
   meta.marrow += earned;
-  meta.stats.best = Math.max(meta.stats.best, game.fi + 1); meta.stats.kills += game.kills; if (won) meta.stats.wins++;
+  meta.stats.best = Math.max(meta.stats.best, game.fi + 1); meta.stats.kills += game.kills; meta.stats.organs = (meta.stats.organs || 0) + game.bosses; if (won) meta.stats.wins++;
   saveMeta(); store.del(RUN);
   const res = { won, earned, fi: game.fi, kills: game.kills, time: game.time, bosses: game.bosses, items: game.players[0].items.length };
   arcadeScore(game.bosses, { floor: game.fi + 1, won, level: game.level });
@@ -197,6 +239,8 @@ function togglePause() {
     const view = mode === 'guest' ? mirror : game; if (!view) return;
     const F = FLOORS[view.fi];
     $('#pauseWhere').textContent = `Plate ${F.plate} · ${F.name}`;
+    const myp = view.players[mode === 'guest' ? 1 : 0], wpn = WEAPON[myp && myp.weapon] || WEAPON.salt;
+    $('#pauseWeapon').textContent = `Carrying: ${wpn.name}. ${wpn.stats}.`;
     $('#pauseNote').textContent = mode === 'solo' ? 'The tower waits. It is patient.' : 'Co-op keeps running while this is open.';
     const list = $('#itemList'); list.innerHTML = '';
     view.players.forEach((p, i) => {
@@ -218,7 +262,9 @@ $('#bSfx').onclick = () => { meta.prefs.sfx = !meta.prefs.sfx; setPrefs(meta.pre
 $('#bSaveQuit').onclick = () => { saveRun(); leaveNet(); toMenu(); };
 $('#bAbandon').onclick = () => {
   if (mode === 'guest') { leaveNet(); toMenu(); return; }
-  if (!confirm('Abandon this climb? You keep the marrow you found.')) return;
+  const b = $('#bAbandon');
+  if (!b.dataset.sure) { b.dataset.sure = '1'; b.innerHTML = '<i>v.</i> Click again to abandon (you keep your marrow)'; setTimeout(() => { delete b.dataset.sure; b.innerHTML = '<i>v.</i> Abandon the climb'; }, 3000); return; }
+  delete b.dataset.sure;
   paused = false; game.state = 'dead'; finishRun();
 };
 
@@ -244,7 +290,7 @@ $('#bJoin').onclick = () => {
   if (code.length !== 4) { $('#joinStatus').textContent = 'Codes are four letters.'; return; }
   $('#joinStatus').textContent = 'Joining…';
   net = new Net(onGuestMsg, (s, why) => {
-    if (s === 'open') { net.send({ t: 'hello', meta: { up: meta.up } }); $('#joinStatus').textContent = 'Joined. Waiting for the host to start.'; }
+    if (s === 'open') { net.send({ t: 'hello', meta: { up: meta.up, weapon: meta.weapon } }); $('#joinStatus').textContent = 'Joined. Waiting for the host to start.'; }
     if (s === 'closed') { if (mode === 'guest') { toast('<div class="ds">The host left the climb.</div>', 3000); toMenu(); } else $('#joinStatus').textContent = why || 'Could not join that room.'; }
   });
   net.join(code);
@@ -293,7 +339,7 @@ function onGuestMsg(m) {
   if (m.t === 's' && mirror) { mirror.applySnap(m); if (m.ev && m.ev.length) handleEvents(mirror, m.ev); }
   if (m.t === 'end') {
     if (endShown) return; endShown = true;
-    meta.marrow += m.earned; meta.stats.climbs++; meta.stats.best = Math.max(meta.stats.best, m.fi + 1); if (m.won) meta.stats.wins++; meta.stats.kills += m.kills; saveMeta();
+    meta.marrow += m.earned; meta.stats.climbs++; meta.stats.best = Math.max(meta.stats.best, m.fi + 1); if (m.won) meta.stats.wins++; meta.stats.kills += m.kills; meta.stats.organs = (meta.stats.organs || 0) + (m.bosses || 0); saveMeta();
     sfx(m.won ? 'won' : 'dead'); setMusic(-1);
     setTimeout(() => endScreen(m), 1400);
   }
@@ -314,6 +360,7 @@ function updateCards() {
   const box = $('#lvl');
   if (!offer) { box.classList.add('hidden'); return; }
   $('#lvlNo').textContent = v.level;
+  $('#lvlOf').textContent = ['one', 'two', 'three', 'four', 'five'][offer.length - 1];
   $('#lvlMore').textContent = p.pend > 1 ? `(${p.pend - 1} more after this)` : '';
   const cards = $('#cards'); cards.innerHTML = '';
   offer.forEach((id, i) => {

@@ -4,9 +4,9 @@ A pixel-art roguelike for one or two climbers. The tower is alive and hungry: cl
 
 Play it at **https://gullet.rennko.tech**
 
-- **6 floors**, each one an organ with its own enemies, palette, music and boss (The Dangler, The Churn, Bellows, The Coil, The Marrow King, The Heart). A full climb takes about an hour.
+- **6 floors**, each one an organ with its own enemies, palette, music and boss (The Dangler, The Churn, Bellows, The Coil, The Marrow King, The Heart). A full climb takes about an hour. Pick one of 6 starting weapons first: Salt, Pepper Spray, Pebble Sling, Vinegar Flask, Bone Boomerang or Matchsticks.
 - **Room-by-room**: doors open when a room is clear. Wrapped caches are a free level: find them in treasure rooms and after bosses, buy them in shops (teeth) or at feeding altars (one heart).
-- **Level up, keep 1 of 3**: every kill feeds XP. Each level, once the room is clear, you pick one of three random items (84 in all, everything the tower swallowed). They stack into builds: piercing, homing, bouncing, splitting, burning, freezing, chain lightning, orbiting salt, garlic auras, wishbones that cheat death, shrapnel and more.
+- **Level up, keep 1 of 3**: every kill feeds XP. Each level, once the room is clear, you pick one of three random items (150 in all, everything the tower swallowed). They stack into builds: piercing, homing, bouncing, splitting, burning, freezing, chain lightning, orbiting salt, garlic auras, wishbones that cheat death, shrapnel and more.
 - **The walls bite** if you hug them.
 - **Save and quit** any time; the climb resumes in the same room.
 - **Basecamp**: marrow you carry home buys permanent upgrades.
