@@ -1,6 +1,6 @@
 {
   "name": "gullet",
-  "version": "1.7.0",
+  "version": "1.8.0",
   "description": "Gullet: climb a hungry, living tower from the inside",
   "main": "desktop/main.cjs",
   "type": "module",

@@ -17,6 +17,8 @@ Play it at **https://gullet.rennko.tech**
 - **6 climbers** to unlock (Wren, Brick, Pip, Old Mags, Hollow, Fang), each with their own look and quirk.
 - **Story**: 18 notes from earlier climbers, Mr. Tapewell the parasite shopkeeper, and endings for the Heart and the Mind.
 - **Room surprises**: secret rooms, golden mini-bosses, three-wave challenge rooms and pitch-dark rooms.
+- **A tutorial** for first-time climbers, and **The Tailor**: skins, hats and trails bought with marrow.
+- **Auto climb**: watch an AI play an infinite climb at up to 4× speed (a simulation; nothing is kept).
 - **Desktop app** for Mac and Windows (fullscreen, works offline; co-op still goes online). Download it from [Releases](https://github.com/learningnihongo934-byte/Gullet/releases).
 - **Save and quit** any time; the climb resumes in the same room.
 - **Basecamp**: marrow you carry home buys permanent upgrades.

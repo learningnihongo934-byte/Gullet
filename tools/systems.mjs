@@ -30,7 +30,7 @@ for (const a of ACTIVES) {
   const ch = g.floor.rooms.find(r => r.challenge), el = g.floor.rooms.find(r => r.elite);
   g.enterRoom(ch, 'n'); let waves = 0;
   for (let i = 0; i < 4000 && !ch.cleared; i++) { g.players[0].inv = 9; for (const e of g.enemies) if (e.spawnT <= 0) g.damage(e, 1e5, g.players[0]); g.update(1 / 60, [{}]); waves += g.events.filter(e => e.k === 'toast' && /Wave/.test(e.text)).length; g.events = []; }
-  ok(ch.cleared && waves === 2 && g.pickups.filter(k => k.kind === 'cache').length >= 2, `challenge room: 3 waves then 2 caches (${waves} wave toasts)`);
+  ok(ch.cleared && waves === 2 && g.pickups.filter(k => k.kind === 'cache').length >= 1, `challenge room: 3 waves then a cache (${waves} wave toasts)`);
   g.enterRoom(el, 'n'); const e = g.enemies.find(e => e.elite);
   ok(e && e.max > 20, `golden ${e && e.type} with ${e && Math.round(e.max)} hp`);
 }

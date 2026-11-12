@@ -4,6 +4,7 @@ import { buildSprites, buildChars, SPR, bosses, whiteOf, climberSprite } from '.
 import { Game } from './sim.js';
 import { Renderer } from './render.js';
 import { Net, Mirror } from './net.js';
+import { botInput } from './bot.js';
 import { initAudio, sfx, setMusic, setPrefs } from './audio.js';
 
 const $ = s => document.querySelector(s);
@@ -25,7 +26,7 @@ const hasWeapon = id => { const w = WEAPON[id]; return !!w && (!w.boss || (meta.
 setInterval(() => { if (metaDirty) { metaDirty = false; saveMeta(); } }, 4000);
 const VERSION = '1.8';
 const LOG = [
-  { v: '1.8', date: 'November 12, 2026', notes: ['A tutorial for first-time climbers: The Mouth teaches moving, salt, dashing, levelling up, bombs, secret rooms and active items, one step at a time. It runs after the prologue the first time you play, and you can replay it from the menu.', 'The Tailor: spend marrow on 8 skins, 8 hats and 6 trails. Your look follows you into co-op.', 'The desktop app is out for Mac and Windows on GitHub Releases.'] },
+  { v: '1.8', date: 'November 12, 2026', notes: ['A tutorial for first-time climbers: The Mouth teaches moving, salt, dashing, levelling up, bombs, secret rooms and active items, one step at a time. It runs after the prologue the first time you play, and you can replay it from the menu.', 'The Tailor: spend marrow on 8 skins, 8 hats and 6 trails. Your look follows you into co-op.', 'Auto climb: watch an AI climb an infinite tower, at up to 4× speed. It is only a simulation, so no marrow, cards or records are kept.', 'Balance: fewer free caches (challenge rooms pay one cache and teeth, golden enemies drop teeth, a heart and a bomb) and levels take a little more XP.', 'The desktop app is out for Mac and Windows on GitHub Releases.'] },
   { v: '1.7', date: 'November 12, 2026', notes: ['A prologue: a short animated opening tells how the tower began. Watch it again from the menu.', 'Game feel: hits freeze the action for a split second, enemies squash when struck and burst when they die, damage numbers pop up (crits in gold), organs die in slow motion with a white flash, and every sound hits harder.', 'Bombs (E): they blast enemies, break lumps and teeth, and crack open hidden walls.', 'Active items (Q): eight of them, charged by kills: Stomach Pump, Ice Tray, Gauze Roll, Salt Lick, Smoke Bomb, Rubber Chicken, Lodestone and Spittoon.', 'Six climbers: Wren, Brick, Pip, Old Mags, Hollow and Fang, each with their own look and quirk. Unlock them by climbing.', 'Mr. Tapewell, the parasite in the top hat, now runs every shop and has opinions.', 'Notes from the climbers who came before: 18 of them, telling the story of the tower in order.', 'Endings for stopping the Heart and the Mind.', 'Secret rooms behind cracked walls, golden mini-bosses, three-wave challenge rooms and pitch-dark rooms.'] },
   { v: '1.6', date: 'November 12, 2026', notes: ['Infinite mode: the climb no longer stops at the heart. Six new body parts lie beyond it: the Liver, Kidneys, Tongue, Nerves, Eye and Brain, each with its own colours, music and organ to stop. After the Brain the whole tower loops, harder every time. Your deepest floor is recorded.', '30 new monsters: snipers that aim a line of light, bombers, healers, mine-laying moths, wall-crawlers, teleporting sparks, summoners, spinners, leapers, armoured vertebrae, swarms of ticks, and a molar that pretends to be a tooth on the floor.', 'Six new organs: the Bile Duke, the Twins, the Taster, the Ganglion, the Optic (watch the beam) and the Mind.', 'Six weapons won from organs: stop each of the first six for the first time to unlock the Acid Spitter, Bile Cannon, Wind Horn, Lamprey Ring, Marrow Lance and Heartstring.', 'The Index now holds 44 monsters and organs and all 12 weapons.'] },
   { v: '1.5', date: 'November 12, 2026', notes: ['The Index: every card, monster, organ and weapon in one place. What you have not found yet stays a silhouette.', 'A desktop app for Mac and Windows that runs fullscreen and works offline. Co-op still connects online.', 'The game now scales to fill your window.'] },
@@ -68,7 +69,7 @@ addEventListener('keydown', e => {
   if (['1', '2', '3', '4', '5'].includes(k) && !paused) pickCard(+k - 1);
 });
 addEventListener('keyup', e => keys.delete(e.key.toLowerCase()));
-addEventListener('blur', () => { keys.clear(); mouse.down = false; if (mode === 'solo' && !paused) togglePause(); });
+addEventListener('blur', () => { keys.clear(); mouse.down = false; if (mode === 'solo' && !paused && !(game && game.auto)) togglePause(); });
 cv.addEventListener('mousedown', e => { initAudio(); mouse.down = true; moveMouse(e); });
 addEventListener('mouseup', () => { mouse.down = false; });
 cv.addEventListener('mousemove', moveMouse);
@@ -249,10 +250,11 @@ const SFX = { fuse: 'fuse', bigboom: 'bigboom', secret: 'secret', active: 'activ
 function handleEvents(view, evs) {
   for (const e of evs) {
     R.fx(view, e);
-    if ((e.k === 'die' || e.k === 'bossdie') && e.ty) { meta.beasts[e.ty] = (meta.beasts[e.ty] || 0) + 1; metaDirty = true; }
-    if (e.k === 'bossdie') { const w = WEAPONS.find(x => x.boss === e.ty); if (w && !(meta.wun = meta.wun || []).includes(w.id)) { meta.wun.push(w.id); saveMeta(); setTimeout(() => toast(`<div class="fig">New weapon</div><div class="nm">${w.name}</div><div class="ds">${w.desc}</div><div class="fl">Pick it before your next climb.</div>`, 4500), 2600); } }
+    const rec = !(view.auto);
+    if (rec && (e.k === 'die' || e.k === 'bossdie') && e.ty) { meta.beasts[e.ty] = (meta.beasts[e.ty] || 0) + 1; metaDirty = true; }
+    if (rec && e.k === 'bossdie') { const w = WEAPONS.find(x => x.boss === e.ty); if (w && !(meta.wun = meta.wun || []).includes(w.id)) { meta.wun.push(w.id); saveMeta(); setTimeout(() => toast(`<div class="fig">New weapon</div><div class="nm">${w.name}</div><div class="ds">${w.desc}</div><div class="fl">Pick it before your next climb.</div>`, 4500), 2600); } }
     if (SFX[e.k]) sfx(SFX[e.k]);
-    if (e.k === 'item' && e.p === view.me && !(meta.found || []).includes(e.id)) { (meta.found = meta.found || []).push(e.id); saveMeta(); }
+    if (rec && e.k === 'item' && e.p === view.me && !(meta.found || []).includes(e.id)) { (meta.found = meta.found || []).push(e.id); saveMeta(); }
     if (e.k === 'item' && !(mode === 'guest' && e.p === 1)) itemToast(e.id, view.coop ? (e.p === view.me ? 'you kept' : 'your partner kept') : '');
     if (e.k === 'toast') toast(`<div class="ds">${e.text}</div>`, 1800);
     if (e.k === 'boss') { card(e.plate, e.name, ''); setMusic(view.fi, true); }
@@ -260,10 +262,11 @@ function handleEvents(view, evs) {
     if (e.k === 'floor') { const F = FL(e.fi); card(F.plate, F.name, F.note); setMusic(e.fi); }
     if (e.k === 'wish') toast(`<div class="ds">${e.p === view.me ? 'The wishbone snapped. You got back up.' : 'Your partner\'s wishbone snapped.'}</div>`, 2200);
     if (e.k === 'levelup' && (view.enemyCount ?? view.enemies.length) > 0) toast(`<div class="ds">Level ${e.lv}. Pick a reward once the room is clear.</div>`, 1600);
-    if (e.k === 'note') { const n = meta.notes || 0; if (n < NOTES.length) { meta.notes = n + 1; saveMeta(); toast(`<div class="fig">A note, left by a climber · ${n + 1} of ${NOTES.length}</div><div class="ds">"${NOTES[n]}"</div>`, 8000); $('#toast').classList.add('note'); setTimeout(() => $('#toast').classList.remove('note'), 8000); } else toast('<div class="ds">Another note. You have read them all.</div>', 2500); }
-    if (e.k === 'gotactive' && e.p === view.me && !(meta.foundA = meta.foundA || []).includes(e.id)) { meta.foundA.push(e.id); metaDirty = true; }
+    if (!rec && e.k === 'note') toast('<div class="ds">The AI found a note. Read it yourself on a real climb.</div>', 2500);
+    if (rec && e.k === 'note') { const n = meta.notes || 0; if (n < NOTES.length) { meta.notes = n + 1; saveMeta(); toast(`<div class="fig">A note, left by a climber · ${n + 1} of ${NOTES.length}</div><div class="ds">"${NOTES[n]}"</div>`, 8000); $('#toast').classList.add('note'); setTimeout(() => $('#toast').classList.remove('note'), 8000); } else toast('<div class="ds">Another note. You have read them all.</div>', 2500); }
+    if (rec && e.k === 'gotactive' && e.p === view.me && !(meta.foundA = meta.foundA || []).includes(e.id)) { meta.foundA.push(e.id); metaDirty = true; }
     if (e.k === 'gotactive' && e.p === view.me) { const A = ACTIVE[e.id]; toast(`<div class="fig">Active item · Q to use</div><div class="nm">${A.name}</div><div class="ds">${A.desc}</div><div class="fl">${A.f}</div>`, 3600); }
-    if (e.k === 'bossdie' && e.ty === 'mind' && meta.beasts.mind === 1) setTimeout(() => showEnding('mind', null), 2200);
+    if (rec && e.k === 'bossdie' && e.ty === 'mind' && meta.beasts.mind === 1) setTimeout(() => showEnding('mind', null), 2200);
     if (e.k === 'tut') { $('#tutStep').textContent = `Lesson ${e.step + 1} of 8`; $('#tutTitle').textContent = e.title; $('#tutText').textContent = e.text; const t = $('#tut'); t.classList.add('hidden'); void t.offsetWidth; t.classList.remove('hidden'); sfx('note'); }
     if (e.k === 'down' && view.coop) toast(`<div class="ds">${e.p === view.me ? 'You went down. Your partner has to clear the room.' : 'Your partner went down. Clear the room to bring them back.'}</div>`, 2600);
   }
@@ -283,14 +286,20 @@ function beginRun(save) {
   const F = FL(game.fi);
   card(F.plate, F.name, save ? 'Back where you left off.' : F.note);
   setMusic(game.fi, game.room.type === 'boss' && !game.room.cleared);
-  if (!save && !game.tut) { meta.stats.climbs++; saveMeta(); }
+  if (!save && !game.tut && !game.auto) { meta.stats.climbs++; saveMeta(); }
   handleEvents(game, game.events.filter(e => e.k === 'boss')); game.events = [];
 }
-function saveRun() { if (game && game.tut) return; if (game && game.state === 'play' && (mode === 'solo' || mode === 'host')) store.set(RUN, game.toSave()); }
+function saveRun() { if (game && (game.tut || game.auto)) return; if (game && game.state === 'play' && (mode === 'solo' || mode === 'host')) store.set(RUN, game.toSave()); }
 addEventListener('beforeunload', saveRun);
 addEventListener('visibilitychange', () => { if (document.hidden) saveRun(); });
 
 function finishRun() {
+  if (game && game.auto) {
+    if (endShown) return; endShown = true; sfx('dead'); setMusic(-1); $('#autobar').classList.add('hidden');
+    const F = FL(game.fi), p = game.players[0];
+    setTimeout(() => { $('#endPlate').textContent = 'Plate ' + F.plate; $('#endWhere').textContent = F.name; $('#endTitle').textContent = 'The simulation ends.'; $('#endNote').textContent = `${CHAR[p.char].name} got as far as ${F.name.toLowerCase()}. This was only a simulation: nothing was carried home.`; $('#endStats').innerHTML = `<dt>Reached</dt><dd>Plate ${F.plate}, ${F.name}</dd><dt>Organs stopped</dt><dd>${game.bosses}</dd><dt>Things killed</dt><dd>${game.kills}</dd><dt>Level</dt><dd>${game.level}, ${p.items.length} cards</dd>`; $('#bAgain').classList.remove('hidden'); $('#bAgain').onclick = () => startAuto(); show('end'); }, 1400);
+    return;
+  }
   if (game && game.tut) { if (game.state === 'tutdone') { sfx('floor'); endTutorial(true); } return; }
   if (endShown) return; endShown = true;
   const won = game.state === 'won';
@@ -314,6 +323,7 @@ function showEnding(which, after) {
   show('ending');
 }
 function endScreen(r) {
+  $('#bAgain').onclick = againSolo;
   const F = FL(r.fi);
   $('#endPlate').textContent = 'Plate ' + F.plate;
   $('#endWhere').textContent = F.name;
@@ -324,10 +334,11 @@ function endScreen(r) {
   $('#bAgain').classList.toggle('hidden', mode === 'guest' || mode === 'host');
   show('end');
 }
-$('#bAgain').onclick = () => { leaveNet(); startSolo(null); };
+const againSolo = () => { leaveNet(); startSolo(null); };
+$('#bAgain').onclick = againSolo;
 $('#bEndCamp').onclick = () => { leaveNet(); toMenu(); show('camp'); };
 $('#bEndTitle').onclick = () => { leaveNet(); toMenu(); };
-function toMenu() { $('#tut').classList.add('hidden'); mode = 'menu'; game = null; mirror = null; paused = false; setMusic(-1); show('title'); }
+function toMenu() { $('#tut').classList.add('hidden'); $('#autobar').classList.add('hidden'); mode = 'menu'; game = null; mirror = null; paused = false; setMusic(-1); show('title'); }
 function leaveNet() { if (net) { net.close(); net = null; } }
 
 // ---------- pause
@@ -542,6 +553,24 @@ function renderTailor(tab) {
   tailRaf = requestAnimationFrame(draw);
 }
 
+// ---------- Auto climb: an AI plays an infinite climb, nothing is kept
+let autoSpeed = 1;
+function startAuto() {
+  initAudio();
+  const wpns = WEAPONS.filter(w => hasWeapon(w.id)), chars = CHARS.filter(charOpen);
+  const pickOne = a => a[Math.floor(Math.random() * a.length)];
+  game = new Game({ coop: false, endless: true, metas: [{ ...meta, weapon: pickOne(wpns).id, char: pickOne(chars).id }] });
+  game.me = 0; game.auto = true; mode = 'solo'; paused = false; endShown = false;
+  show(null); setAutoSpeed(1); $('#autobar').classList.remove('hidden');
+  const F = FL(0), p = game.players[0];
+  card(F.plate, 'Auto climb', `${CHAR[p.char].name} with the ${WEAPON[p.weapon].name}. Sit back.`);
+  setMusic(0);
+}
+function setAutoSpeed(n) { autoSpeed = n; document.querySelectorAll('#autobar [data-sp]').forEach(b => b.classList.toggle('on', +b.dataset.sp === n)); }
+document.querySelectorAll('#autobar [data-sp]').forEach(b => b.onclick = () => setAutoSpeed(+b.dataset.sp));
+$('#bAutoStop').onclick = () => { $('#autobar').classList.add('hidden'); toMenu(); };
+$('#bAuto').onclick = () => startAuto();
+
 // ---------- tutorial: The Mouth
 function startTutorial() {
   initAudio();
@@ -590,10 +619,10 @@ function frame(now) {
     if (game.hitStop > 0) { game.hitStop -= dt; }
     else if (run && game.state === 'play') {
       if (game.slowmo > 0) game.slowmo -= dt;
-      acc += game.slowmo > 0 ? dt * 0.3 : dt;
+      acc += (game.slowmo > 0 ? dt * 0.3 : dt) * (game.auto ? autoSpeed : 1);
       while (acc >= STEP) {
         const g = { ...guestIn, dash: !!guestIn.dashPending, bomb: !!guestIn.bombPending, use: !!guestIn.usePending }; guestIn.dashPending = guestIn.bombPending = guestIn.usePending = false;
-        game.update(STEP, [readInput(game, 0), mode === 'host' ? g : {}]);
+        game.update(STEP, [game.auto ? botInput(game, game.players[0]) : readInput(game, 0), mode === 'host' ? g : {}]);
         acc -= STEP;
         const evs = game.events; game.events = [];
         handleEvents(game, evs);
@@ -615,7 +644,7 @@ function frame(now) {
     if (inT >= 1 / 30 && net) { inT = 0; const i = readInput(mirror, 1); net.send({ t: 'in', i: { mx: i.mx, my: i.my, ax: i.ax, ay: i.ay, ds: i.ds, bs: i.bs, us: i.us } }); }
     if (mirror.room) R.draw(mirror, dt); else R.drawTitle(dt);
   }
-  if (mode !== 'menu' && mode !== 'intro') updateCards(); else if (cardKey) { cardKey = ''; $('#lvl').classList.add('hidden'); }
+  if (mode !== 'menu' && mode !== 'intro' && !(game && game.auto)) updateCards(); else if (cardKey) { cardKey = ''; $('#lvl').classList.add('hidden'); }
   requestAnimationFrame(frame);
 }
 if (!meta.seenIntro) startIntro(); else show('title');

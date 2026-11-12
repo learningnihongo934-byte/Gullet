@@ -16,6 +16,7 @@ case "${1:-dev}" in
     node tools/endless.mjs
     node tools/systems.mjs
     node tools/tutorial.mjs
+    node tools/autoplay.mjs 2 6
     ;;
   deploy) npx -y wrangler@4 deploy ;;
   desktop) [ -d node_modules/electron ] || npm install; npx electron . ;;

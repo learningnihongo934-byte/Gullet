@@ -87,7 +87,7 @@ export class Game {
   get map() { return this.mapData(); }
 
   // ---------- levels: kills feed XP; every level, each climber picks 1 of 3 swallowed things once the room is safe
-  xpNeed() { return 6 + this.level * 4; }
+  xpNeed() { return 8 + this.level * 5; }
   gainXp(n) {
     this.xp += n * Math.max(1, Math.max(0, ...this.players.filter(q => q.present).map(q => q.st.xpMul)));
     while (this.xp >= this.xpNeed()) { this.xp -= this.xpNeed(); this.levelUp(); }
@@ -420,7 +420,7 @@ export class Game {
     if (rnd() < 0.03) this.drop('marrow', e.x + 4, e.y, 1);
     if (rnd() < 0.035 + luck * 0.005) this.drop('bomb', e.x - 4, e.y, 1);
     for (const q of this.players) if (q.present && q.active) q.charge = Math.min(99, q.charge + 1);
-    if (e.elite) { this.pickups.push({ kind: 'cache', x: e.x, y: e.y }); this.drop('teeth', e.x + 8, e.y, 3); this.ev({ k: 'toast', text: 'The golden one drops a cache' }); }
+    if (e.elite) { this.drop('heart', e.x - 8, e.y, 2); this.drop('teeth', e.x + 8, e.y, 5); this.drop('bomb', e.x, e.y + 8, 1); }
     if (p && p.st.dashReset) p.dashCd = 0;
     if (p && p.st.deathBurst) for (let i = 0; i < 3 * p.st.deathBurst; i++) this.pbullet(p, e.x, e.y, rnd() * TAU, 160, p.st.dmg * p.st.dmgMul * 0.6, { life: 0.4, shard: 1, k: 'w', r: 1.5 });
     if (p && p.st.leech && rnd() < 0.05 * p.st.leech + p.st.luck * 0.01 && p.hp < p.st.maxhp) { p.hp++; this.ev({ k: 'heal', p: p.id, x: p.x, y: p.y }); }
@@ -1248,7 +1248,7 @@ export class Game {
     if (room.cleared || this.enemies.length || this.roomT < 0.8) return;
     if (room.waves > 1) { room.waves--; this.roomT = 0; this.spawnEnemies(); this.ev({ k: 'toast', text: `Wave ${4 - room.waves} of 3` }); this.ev({ k: 'tele' }); return; }
     room.cleared = true;
-    if (room.challenge) { room.challenge = 0; for (const dx of [-16, 16]) this.pickups.push({ kind: 'cache', x: CX + dx, y: CY }); this.ev({ k: 'toast', text: 'Challenge beaten: two caches' }); }
+    if (room.challenge) { room.challenge = 0; this.pickups.push({ kind: 'cache', x: CX - 16, y: CY }); this.drop('teeth', CX + 16, CY, 6); this.ev({ k: 'toast', text: 'Challenge beaten: a cache and a pile of teeth' }); }
     this.ev({ k: 'clear' });
     for (const p of this.players) if (p.present && p.down) { p.down = false; p.hp = 2; p.inv = 1.5; this.ev({ k: 'revive', p: p.id }); }
     for (const p of this.players) {

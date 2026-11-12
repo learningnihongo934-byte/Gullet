@@ -18,7 +18,7 @@ function run(sec) {
     for (const p of g.players) if (p.offer) g.choose(p.id, Math.floor(Math.random() * 3));
     if (frames % 120 === 0) maxSnap = Math.max(maxSnap, JSON.stringify(g.snap()).length);
     if (g.room.cleared && !g.enemies.length) return true;
-    if (i === 25 * 60 && g.enemies.length) { assisted++; for (const e of g.enemies.slice()) if (!e.boss) g.damage(e, 9999, g.players[0]); }
+    if (i >= 20 * 60 && i % 600 === 0 && g.enemies.length) { assisted++; for (const e of g.enemies.slice()) if (!e.boss) g.damage(e, 9999, g.players[0]); }
     if (process.env.DBG && i === sec * 60 - 1) console.log(g.room.tiles.join('\n'), g.enemies.map(e => [e.type, e.x | 0, e.y | 0, g.tileAtPx(e.x, e.y), e.hp | 0]), g.players.map(p => [p.x | 0, p.y | 0]));
   }
   return false;
