@@ -1,0 +1,99 @@
+/* Gullet: menus are plates from an old anatomy textbook. Cream stock, oxblood ink, engraved type. */
+:root {
+  --paper: #efe4cc; --paper2: #e4d6b8; --ink: #3a1414; --red: #8a1a24; --faint: #7a5a50; --night: #120408;
+  --s: 3;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--night); color: var(--ink); overflow: hidden; }
+body { font-family: 'IM Fell English', Georgia, serif; }
+#stage { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); }
+#cv { display: block; width: 100%; height: 100%; image-rendering: pixelated; image-rendering: crisp-edges; }
+#ui { position: absolute; inset: 0; pointer-events: none; }
+.hidden { display: none !important; }
+
+.plate {
+  pointer-events: auto; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: min(92%, calc(var(--s) * 210px)); max-height: 94%; overflow: auto;
+  background:
+    radial-gradient(circle at 20% 15%, rgba(255,255,255,.35), transparent 40%),
+    radial-gradient(circle at 80% 90%, rgba(120,70,40,.12), transparent 50%),
+    repeating-linear-gradient(0deg, rgba(90,50,30,.035) 0 1px, transparent 1px 3px),
+    var(--paper);
+  border: 1px solid var(--ink); outline: 3px double var(--ink); outline-offset: calc(var(--s) * 1.5px);
+  padding: calc(var(--s) * 7px) calc(var(--s) * 9px) calc(var(--s) * 6px);
+  box-shadow: 0 0 0 calc(var(--s) * 3px) var(--paper2), 0 calc(var(--s) * 4px) calc(var(--s) * 10px) rgba(0,0,0,.6);
+  font-size: calc(var(--s) * 5.2px); line-height: 1.35;
+}
+.plate.side { left: auto; right: 4%; transform: translate(0, -50%); width: min(56%, calc(var(--s) * 160px)); }
+.plate-head { display: flex; justify-content: space-between; gap: 1em; font-family: 'IM Fell English SC', serif; font-size: .8em; color: var(--faint); border-bottom: 1px solid var(--faint); padding-bottom: .3em; margin-bottom: .6em; letter-spacing: .04em; }
+h1, h2, h3 { font-family: 'IM Fell English SC', serif; font-weight: 400; color: var(--red); margin: 0; }
+h1 { font-size: 3.4em; line-height: .95; letter-spacing: .02em; }
+h2 { font-size: 2em; line-height: 1; margin-bottom: .2em; }
+h3 { font-size: 1.15em; color: var(--ink); margin: .3em 0; }
+.sub { margin: .4em 0 .8em; font-style: italic; }
+.menu { display: flex; flex-direction: column; align-items: flex-start; gap: .1em; margin-top: .4em; }
+.menu button, button.ink {
+  pointer-events: auto; font: inherit; color: var(--ink); background: none; border: 0; padding: .12em 0; cursor: pointer; text-align: left;
+  font-size: 1.12em; text-decoration: none;
+}
+.menu button i { display: inline-block; min-width: 1.9em; color: var(--red); font-style: italic; }
+.menu button:hover, .menu button:focus-visible, button.ink:hover, button.ink:focus-visible { color: var(--red); text-decoration: underline; text-underline-offset: .18em; outline: none; }
+button.ink { border-bottom: 1px solid var(--ink); padding: .1em .1em; margin: .2em 0; }
+button:disabled { color: var(--faint); cursor: default; text-decoration: none !important; }
+.foot { margin: .9em 0 0; font-size: .82em; color: var(--faint); border-top: 1px solid var(--faint); padding-top: .4em; }
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2em; }
+.code { font-family: 'IM Fell English SC', serif; font-size: 2.4em; color: var(--red); letter-spacing: .25em; margin: .1em 0; min-height: 1em; }
+.status { font-style: italic; color: var(--faint); min-height: 1.3em; margin: .2em 0; }
+input#joinCode { font: inherit; font-family: 'IM Fell English SC', serif; font-size: 1.8em; width: 5.2em; letter-spacing: .25em; text-transform: uppercase; color: var(--red); background: transparent; border: 0; border-bottom: 1px solid var(--ink); outline: none; padding: 0 .1em; display: block; pointer-events: auto; }
+#ups { display: flex; flex-direction: column; gap: .35em; margin: .4em 0; }
+.up { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: .1em 1em; border-bottom: 1px dotted var(--faint); padding-bottom: .3em; }
+.up b { font-family: 'IM Fell English SC', serif; font-weight: 400; font-size: 1.1em; }
+.up small { font-style: italic; color: var(--faint); grid-column: 1; }
+.up .pips { grid-column: 1; letter-spacing: .1em; }
+.pip { display: inline-block; width: .55em; height: .55em; border: 1px solid var(--ink); margin-right: .2em; transform: rotate(45deg); }
+.pip.on { background: var(--red); border-color: var(--red); }
+.up button { grid-row: 1 / span 3; grid-column: 2; }
+.keys { display: grid; grid-template-columns: auto 1fr; gap: .25em 1em; margin: .4em 0 .6em; }
+.keys dt { font-family: 'IM Fell English SC', serif; color: var(--red); }
+.keys dd { margin: 0; }
+.notes { margin: 0; padding-left: 1.1em; }
+.notes li { margin: .15em 0; }
+.stats { display: grid; grid-template-columns: auto 1fr; gap: .15em 1em; margin: .3em 0 .5em; }
+.stats dt { font-family: 'IM Fell English SC', serif; color: var(--faint); }
+.stats dd { margin: 0; }
+#itemList { display: flex; flex-wrap: wrap; gap: .4em; margin: .3em 0 .6em; }
+#itemList .it { display: flex; align-items: center; gap: .3em; font-size: .85em; border: 1px solid var(--faint); padding: .1em .4em .1em .2em; background: rgba(255,255,255,.25); }
+#itemList img { width: calc(var(--s) * 12px); height: calc(var(--s) * 12px); image-rendering: pixelated; }
+#itemList .who { font-family: 'IM Fell English SC', serif; color: var(--red); width: 100%; font-size: .9em; }
+
+#lvl { position: absolute; left: 50%; bottom: 3%; transform: translateX(-50%); width: 96%; pointer-events: none; text-align: center; font-size: calc(var(--s) * 4.4px); }
+.lvl-head { display: inline-block; font-family: 'IM Fell English SC', serif; color: var(--paper); text-shadow: 0 2px 0 #000; font-size: 1.15em; margin-bottom: .35em; }
+.lvl-head b { color: #f2d15c; font-weight: 400; }
+#cards { display: flex; gap: 2%; justify-content: center; }
+.cardi { pointer-events: auto; cursor: pointer; flex: 0 1 31%; background: var(--paper); border: 1px solid var(--ink); outline: 2px double var(--ink); outline-offset: 2px; padding: .4em .6em .5em; text-align: left; font: inherit; color: var(--ink); display: grid; grid-template-columns: auto 1fr; gap: 0 .5em; box-shadow: 0 4px 14px rgba(0,0,0,.55); animation: deal .35s ease-out backwards; }
+.cardi:nth-child(2) { animation-delay: .07s; } .cardi:nth-child(3) { animation-delay: .14s; }
+@keyframes deal { from { transform: translateY(40%); opacity: 0; } }
+.cardi:hover, .cardi:focus-visible { outline-color: var(--red); transform: translateY(-4%); }
+.cardi img { grid-row: 1 / span 3; width: calc(var(--s) * 16px); height: calc(var(--s) * 16px); image-rendering: pixelated; align-self: center; }
+.cardi .k { font-family: 'IM Fell English SC', serif; color: var(--faint); font-size: .8em; }
+.cardi .nm { font-family: 'IM Fell English SC', serif; color: var(--red); font-size: 1.2em; line-height: 1.05; }
+.cardi .ds { font-size: .95em; }
+.cardi .fl { grid-column: 1 / span 2; font-style: italic; color: var(--faint); font-size: .8em; margin-top: .2em; }
+#toast { position: absolute; left: 50%; bottom: 6%; transform: translateX(-50%); pointer-events: none; text-align: center;
+  background: var(--paper); border: 1px solid var(--ink); outline: 2px double var(--ink); outline-offset: 3px; padding: .35em 1.1em .45em;
+  font-size: calc(var(--s) * 4.6px); max-width: 80%; box-shadow: 0 4px 14px rgba(0,0,0,.5); }
+#toast .fig { font-family: 'IM Fell English SC', serif; color: var(--faint); font-size: .75em; letter-spacing: .05em; }
+#toast .nm { font-family: 'IM Fell English SC', serif; color: var(--red); font-size: 1.35em; line-height: 1.05; }
+#toast .ds { font-size: 1em; }
+#toast .fl { font-style: italic; color: var(--faint); font-size: .85em; }
+#card { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); pointer-events: none; text-align: center; color: var(--paper);
+  text-shadow: 0 2px 0 #000, 0 0 12px rgba(0,0,0,.8); font-size: calc(var(--s) * 5px); animation: card 2.4s ease-out forwards; width: 90%; }
+#card .pl { font-family: 'IM Fell English SC', serif; letter-spacing: .3em; font-size: .9em; color: #e2b8a8; }
+#card .nm { font-family: 'IM Fell English SC', serif; font-size: 2.8em; line-height: 1; }
+#card .nt { font-style: italic; font-size: 1em; margin-top: .2em; }
+@keyframes card { 0% { opacity: 0; letter-spacing: .1em; } 12% { opacity: 1; letter-spacing: 0; } 75% { opacity: 1; } 100% { opacity: 0; } }
+
+@media (max-width: 700px) {
+  .plate, .plate.side { left: 50%; right: auto; transform: translate(-50%, -50%); width: 94%; font-size: 15px; }
+  .cols { grid-template-columns: 1fr; }
+}

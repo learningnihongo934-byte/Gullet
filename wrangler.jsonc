@@ -1,0 +1,12 @@
+{
+  // Gullet: static game (web/) + co-op relay rooms (Durable Objects). ./build.sh deploy
+  "name": "gullet",
+  "main": "src/worker.js",
+  "compatibility_date": "2025-10-01",
+  "assets": { "directory": "web", "binding": "ASSETS", "run_worker_first": ["/api/*"] },
+  "durable_objects": { "bindings": [{ "name": "ROOMS", "class_name": "Room" }] },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Room"] }],
+  // gullet.rennko.tech/* is more specific than Rennko Cloud's *.rennko.tech/* route, so this host stays here
+  "routes": [{ "pattern": "gullet.rennko.tech", "custom_domain": true }, { "pattern": "gullet.rennko.tech/*", "zone_name": "rennko.tech" }],
+  "workers_dev": true
+}

@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gullet</title>
+<meta name="description" content="A pixel-art roguelike for one or two climbers: climb up the inside of a hungry, living tower to reach its heart.">
+<meta property="og:title" content="Gullet">
+<meta property="og:description" content="Climb a hungry, living tower from the inside. Solo or online co-op.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%233a0f19'/%3E%3Cpath d='M3 4h10v3H3z' fill='%23c45a70'/%3E%3Cpath d='M4 7l1 3 1-3 1 3 1-3 1 3 1-3 1 3 1-3' fill='%23f6ecd9'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="stage">
+  <canvas id="cv" width="320" height="196"></canvas>
+  <div id="ui">
+    <section id="title" class="screen plate side">
+      <div class="plate-head"><span>Plate 0</span><span>On the Climbing of a Hungry Tower</span></div>
+      <h1>Gullet</h1>
+      <p class="sub">The tower is alive, and it is hungry. Climb up its throat, stomach, lungs, bowels and spine, and reach its heart before it digests you.</p>
+      <nav class="menu">
+        <button id="bContinue" class="hidden"><i>i.</i> Continue the climb</button>
+        <button id="bNew"><i>ii.</i> New climb</button>
+        <button id="bCoop"><i>iii.</i> Climb with a friend</button>
+        <button id="bCamp"><i>iv.</i> Basecamp</button>
+        <button id="bHelp"><i>v.</i> Field notes</button>
+      </nav>
+      <p class="foot" id="metaLine"></p>
+    </section>
+
+    <section id="coop" class="screen plate hidden">
+      <div class="plate-head"><span>Plate 0a</span><span>Two Climbers, One Rope</span></div>
+      <h2>Climb with a friend</h2>
+      <p class="sub">One of you opens a room and shares the four-letter code. The other joins with it. The host's computer runs the climb.</p>
+      <div class="cols">
+        <div>
+          <h3>Host</h3>
+          <button id="bHost" class="ink">Open a room</button>
+          <p class="code" id="roomCode"></p>
+          <p class="status" id="hostStatus"></p>
+          <button id="bStartCoop" class="ink hidden">Start a new climb</button>
+          <button id="bContCoop" class="ink hidden">Continue our saved climb</button>
+        </div>
+        <div>
+          <h3>Join</h3>
+          <input id="joinCode" maxlength="4" placeholder="CODE" autocomplete="off" spellcheck="false">
+          <button id="bJoin" class="ink">Join</button>
+          <p class="status" id="joinStatus"></p>
+        </div>
+      </div>
+      <nav class="menu"><button data-back><i>&larr;</i> Back</button></nav>
+    </section>
+
+    <section id="camp" class="screen plate hidden">
+      <div class="plate-head"><span>Plate 0b</span><span>Basecamp, at the Foot of the Tower</span></div>
+      <h2>Basecamp</h2>
+      <p class="sub">Marrow you carry back down buys grafts that stay with you on every climb. You have <b id="campMarrow">0</b> marrow.</p>
+      <div id="ups"></div>
+      <nav class="menu"><button data-back><i>&larr;</i> Back</button></nav>
+    </section>
+
+    <section id="help" class="screen plate hidden">
+      <div class="plate-head"><span>Plate 0c</span><span>Field Notes of a Climber</span></div>
+      <h2>Field notes</h2>
+      <dl class="keys">
+        <dt>W A S D</dt><dd>Move</dd>
+        <dt>Arrow keys, or hold the mouse</dt><dd>Throw salt. Salt is the only thing the tower is afraid of.</dd>
+        <dt>Space or Shift</dt><dd>Dash. You can't be hit while dashing.</dd>
+        <dt>1 2 3</dt><dd>Pick a level-up card</dd>
+        <dt>Esc</dt><dd>Pause, see your items, save and quit</dd>
+      </dl>
+      <ul class="notes">
+        <li>Doors open when a room is empty of everything that wants to eat you.</li>
+        <li>Enemies flash white right before they attack. That's your cue.</li>
+        <li>Don't hug the walls. The walls have teeth.</li>
+        <li>Every kill feeds your level. Each level, once the room is clear, keep one of three things the tower swallowed (press 1, 2 or 3). Effects stack.</li>
+        <li>Wrapped caches are a free level. Shops sell them for teeth; feeding altars want one of your hearts.</li>
+        <li>Each floor ends in an organ that fights back. Beat it and climb the rope up.</li>
+        <li>In co-op, a fallen climber comes back when the room is cleared.</li>
+        <li>Save and quit any time. You'll pick up in the same room.</li>
+      </ul>
+      <nav class="menu"><button data-back><i>&larr;</i> Back</button></nav>
+    </section>
+
+    <section id="pause" class="screen plate hidden">
+      <div class="plate-head"><span>Interlude</span><span id="pauseWhere"></span></div>
+      <h2>Paused</h2>
+      <p class="sub" id="pauseNote"></p>
+      <div id="itemList"></div>
+      <nav class="menu">
+        <button id="bResume"><i>i.</i> Resume</button>
+        <button id="bMusic"><i>ii.</i> Music: on</button>
+        <button id="bSfx"><i>iii.</i> Sounds: on</button>
+        <button id="bSaveQuit"><i>iv.</i> Save and quit</button>
+        <button id="bAbandon"><i>v.</i> Abandon the climb</button>
+      </nav>
+    </section>
+
+    <section id="end" class="screen plate hidden">
+      <div class="plate-head"><span id="endPlate">Plate</span><span id="endWhere"></span></div>
+      <h2 id="endTitle">Digested.</h2>
+      <p class="sub" id="endNote"></p>
+      <dl class="stats" id="endStats"></dl>
+      <nav class="menu">
+        <button id="bAgain"><i>i.</i> Climb again</button>
+        <button id="bEndCamp"><i>ii.</i> Basecamp</button>
+        <button id="bEndTitle"><i>iii.</i> Title</button>
+      </nav>
+    </section>
+
+    <div id="lvl" class="hidden"><div class="lvl-head">Level <b id="lvlNo"></b> &middot; keep one of three <span id="lvlMore"></span></div><div id="cards"></div></div>
+    <div id="toast" class="hidden"></div>
+    <div id="card" class="hidden"></div>
+  </div>
+</div>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
