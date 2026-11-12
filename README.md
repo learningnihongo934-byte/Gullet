@@ -19,6 +19,7 @@ Play it at **https://gullet.rennko.tech**
 - **Room surprises**: secret rooms, golden mini-bosses, three-wave challenge rooms and pitch-dark rooms.
 - **A tutorial** for first-time climbers, and **The Tailor**: skins, hats and trails bought with marrow.
 - **Auto climb**: watch an AI play an infinite climb at up to 4× speed (a simulation; nothing is kept).
+- **Sandbox**: spawn any monster or organ, paint the room, place props, switch body parts, save layouts, and give yourself any weapon, climber, active or card.
 - **Desktop app** for Mac and Windows (fullscreen, works offline; co-op still goes online). Download it from [Releases](https://github.com/learningnihongo934-byte/Gullet/releases).
 - **Save and quit** any time; the climb resumes in the same room.
 - **Basecamp**: marrow you carry home buys permanent upgrades.

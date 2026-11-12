@@ -1,6 +1,7 @@
 // Gullet simulation. One Game runs on the solo player's or the co-op host's machine; the guest only
 // sends inputs and draws snapshots. Everything here is plain data so a run can be saved mid-climb.
 import { TILE, RW, RH, OX, OY, CX, CY, DOORS, DIRS, OPP, FLOORS, ENEMIES, BOSSES, ITEMS, ITEM, statsFor, baseStats, FL, WEAPON, ACTIVES, ACTIVE, CHAR, SHOP_LINES, NOTES } from './data.js';
+import { BOSSES as BOSS_DEFS } from './data.js';
 import { genFloor } from './gen.js';
 
 const rnd = Math.random, rr = (a, b) => a + rnd() * (b - a), pick = a => a[Math.floor(rnd() * a.length)];
@@ -18,6 +19,7 @@ export class Game {
     this.valve = null; this.biteT = 4; this.winT = 0;
     if (o.save) this.load(o.save); else this.fresh(o.metas || [{}]);
     if (o.tutorial) this.setupTutorial();
+    if (o.sandbox) this.setupSandbox(o.meta || {});
     this.enterRoom(this.room, null);
   }
 
@@ -325,7 +327,7 @@ export class Game {
   }
 
   hurt(p, amt) {
-    if (p.inv > 0 || p.dashT > 0 || p.down || !p.present || this.state !== 'play') return false;
+    if (p.inv > 0 || p.dashT > 0 || p.down || !p.present || this.state !== 'play' || this.god) return false;
     if (p.shields > 0) { p.shields--; p.shieldUp = p.shields > 0; p.inv = 0.8; this.ev({ k: 'shield', p: p.id, x: p.x, y: p.y }); return true; }
     if (p.st.dodge && rnd() < Math.min(0.5, p.st.dodge)) { p.inv = 0.5; this.ev({ k: 'dodge', p: p.id, x: p.x, y: p.y }); return true; }
     p.streak = 0; p.roomHit = true;
@@ -336,6 +338,7 @@ export class Game {
     if (p.st.hurtFreeze) { for (const e of this.enemies) e.stun = Math.max(e.stun || 0, (e.boss ? 0.8 : 1.6) * p.st.hurtFreeze); this.ev({ k: 'freeze' }); }
     if (p.st.hurtBurst) for (let i = 0; i < 10 * p.st.hurtBurst; i++) this.pbullet(p, p.x, p.y - 4, i * TAU / (10 * p.st.hurtBurst), p.st.shotSpeed, p.st.dmg * p.st.dmgMul, { life: 0.6 });
     if (p.hp <= 0 && p.revives > 0) { p.revives--; p.hp = 2; p.inv = 2; this.ev({ k: 'wish', p: p.id, x: p.x, y: p.y }); return true; }
+    if (p.hp <= 0 && this.sandbox) { p.hp = p.st.maxhp; p.inv = 2; this.ev({ k: 'toast', text: 'You died. The sandbox puts you back on your feet.' }); return true; }
     if (p.hp <= 0) { p.hp = 0; p.down = true; this.ev({ k: 'down', p: p.id }); }
     return true;
   }
@@ -384,8 +387,8 @@ export class Game {
     this.spawnStyle = null;
     if (this.room.digest && !this.room.cleared) { this.digestT = 2.5; this.ev({ k: 'toast', text: 'The room is digesting you. Clear it fast!' }); }
   }
-  spawnBoss() {
-    const F = FL(this.fi), type = F.boss, d = BOSSES[type];
+  spawnBoss(forceType, at) {
+    const F = FL(this.fi), type = forceType || F.boss, d = BOSSES[type];
     const hp = d.hp * (1 + 0.6 * this.tier()) * (this.twoPlayers() ? 1.5 : 1) * (1 - Math.min(0.3, Math.max(0, ...this.players.filter(q => q.present).map(q => q.st.bossCut))));
     const e = { id: NID++, type, boss: 1, x: CX, y: CY - 10, r: d.r, hp, max: hp, st: 'intro', t: 1.8, age: 0, spawnT: 0, flash: 0, kx: 0, ky: 0, z: 0, a: 0 };
     if (type === 'dangler') e.y = OY + 54;
@@ -396,8 +399,10 @@ export class Game {
     if (type === 'taster') e.y = OY + 60;
     if (type === 'twins') { e.cx = CX; e.cy = CY - 10; e.segs = [[CX + 26, CY - 10]]; e.segR = 12; }
     if (type === 'optic' || type === 'ganglion') e.y = CY - 6;
+    if (at) { e.x = at[0]; e.y = at[1]; e.cx = at[0]; e.cy = at[1]; if (e.segs) e.segs = type === 'twins' ? [[at[0] + 26, at[1]]] : []; }
     this.enemies.push(e);
     this.ev({ k: 'boss', name: d.name, plate: F.plate });
+    return e;
   }
   nearestPlayer(e) {
     if (this.decoy) return this.decoy;
@@ -461,6 +466,7 @@ export class Game {
     this.drop('heart', CX - 30, CY + 20, 2);
     this.pickups.push({ kind: 'cache', x: CX, y: CY + 26 });
     this.gainXp(8 + this.fi * 3);
+    if (this.sandbox) return;
     if (this.hasNext()) this.valve = { x: CX, y: CY - 14 }; else this.winT = 3.5;
   }
 
@@ -481,6 +487,8 @@ export class Game {
       const tgt = this.nearestPlayer(e);
       if (e.stun > 0) e.stun -= dt;
       else if (e.boss) this.bossAI(e, dt, tgt);
+      else if (this.frozen && !e.boss) { }
+      else if (this.frozen && e.boss) { }
       else if (e.dummy) { if (e.dummy === 2) { e.t -= dt; e.st = e.t < 0.5 ? 'wind' : 'idle'; if (e.t <= 0 && tgt) { e.t = 1.1; this.fan(e, tgt, 3, 0.3, 55, 'b'); } } }
       else if (tgt) this.ai(e, dt, tgt, (e.champ === 'swift' ? 1.6 : e.champ === 'giant' ? 0.8 : 1) * (e.poison ? 0.65 : 1) * (e.slowT > 0 ? 0.5 : 1) * (1 - Math.min(0.35, this.slowAll || 0)));
       if (!e.boss) { this.move(e, e.kx * dt, e.ky * dt, e.fly ? 'f' : 'e'); const k = Math.pow(0.002, dt); e.kx *= k; e.ky *= k; }
@@ -1079,6 +1087,61 @@ export class Game {
   blast(p, x, y, dmg) {
     this.ev({ k: 'boom', x, y, r: 28 }); this.shake = Math.max(this.shake, 3);
     for (const o of this.enemies) if (!o.dead && !o.under && o.spawnT <= 0 && Math.hypot(o.x - x, o.y - y) < 28 + o.r) this.damage(o, 4 + dmg * 1.5, p);
+  }
+
+  // ---------- sandbox: one open room you can build, fill and break
+  setupSandbox(meta) {
+    const rows = [];
+    for (let y = 0; y < RH; y++) { let r = ''; for (let x = 0; x < RW; x++) r += x === 0 || y === 0 || x === RW - 1 || y === RH - 1 ? '#' : '.'; rows.push(r); }
+    const room = { gx: 4, gy: 4, key: 'sb', type: 'sandbox', doors: {}, tiles: rows, cleared: true, visited: true, drops: [], props: [] };
+    this.floor = { fi: this.fi, seed: this.seed, rooms: [room] };
+    this.sandbox = true;
+    this.enterRoom(room, null);
+  }
+  sbTile(tx, ty, ch) {
+    if (tx < 1 || ty < 1 || tx > RW - 2 || ty > RH - 2) return;
+    const rows = this.room.tiles.map(r => [...r]);
+    if (rows[ty][tx] === ch) return;
+    rows[ty][tx] = ch; this.room.tiles = rows.map(r => r.join('')); this.room.bgv = (this.room.bgv || 0) + 1;
+    for (const p of this.alive()) this.resolve(p, 'p');
+  }
+  sbProp(k, x, y) { this.props.push({ k, x: Math.round(x), y: Math.round(y), hp: { pod: 6, bones: 4, sac: 1, spikes: 1, pore: 10 }[k], t: Math.random() * 2.4 }); }
+  sbSpawn(type, x, y) {
+    if (BOSS_DEFS[type]) { const e = this.spawnBoss(type, [x, y]); e.st = 'idle'; e.t = 1; return; }
+    const e = this.addEnemy(type, x, y); e.spawnT = 0.4;
+  }
+  sbErase(x, y) {
+    const near = (o, r) => Math.hypot(o.x - x, o.y - y) < r;
+    const e = this.enemies.find(e => !e.dead && near(e, e.r + 6));
+    if (e) { e.dead = true; this.ev({ k: 'die', x: e.x, y: e.y, c: '#c9b8a0' }); return; }
+    const q = this.props.findIndex(q => !q.dead && near(q, 9));
+    if (q >= 0) { this.props.splice(q, 1); return; }
+    const k = this.pickups.findIndex(k => near(k, 9));
+    if (k >= 0) { this.pickups.splice(k, 1); return; }
+    const tx = Math.floor((x - OX) / TILE), ty = Math.floor((y - OY) / TILE);
+    if (this.tile(tx, ty) !== '.') this.sbTile(tx, ty, '.');
+  }
+  sbClear(what) {
+    if (what !== 'room') { for (const e of this.enemies) e.dead = true; this.enemies = []; this.bullets = this.bullets.filter(b => !b.en); this.hazards = []; return; }
+    this.room.tiles = this.room.tiles.map((r, y) => [...r].map((c, x) => x === 0 || y === 0 || x === RW - 1 || y === RH - 1 ? '#' : '.').join(''));
+    this.room.bgv = (this.room.bgv || 0) + 1; this.props.length = 0; this.pickups = [];
+  }
+  sbFloor(fi) { this.fi = fi; this.room.bgv = (this.room.bgv || 0) + 1; this.roomChanged = true; }
+  /** Rebuild a climber's stats from scratch: base, upgrades, weapon, climber, then every card held. */
+  sbRebuild(p, meta, weapon, char) {
+    const items = p.items.slice();
+    p.weapon = weapon; p.char = char; p.r = char === 'pip' ? 4 : 5;
+    p.st = statsFor({ ...meta, weapon });
+    CHAR[char].apply(p.st, null, null);
+    p.items = [];
+    for (const id of items) { const it = ITEM[id]; if (it) { it.apply(p.st, null, null); p.items.push(id); } }
+    p.hp = p.st.maxhp; p.shields = p.st.shield; p.shieldUp = p.shields > 0;
+  }
+  sbLoad(lay) {
+    this.fi = lay.fi || 0;
+    this.room.tiles = lay.tiles.slice(); this.room.bgv = (this.room.bgv || 0) + 1;
+    this.props.length = 0; for (const q of lay.props || []) this.sbProp(q.k, q.x, q.y);
+    this.sbClear('enemies');
   }
 
   // ---------- the tutorial: two rooms in the mouth, one lesson at a time

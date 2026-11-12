@@ -28,6 +28,7 @@
         <button id="bInf"><i>ii.</i> Infinite climb <small>beyond the heart</small></button>
         <button id="bCoop"><i>iii.</i> Climb with a friend</button>
         <button id="bAuto"><i>iii.</i> Auto climb <small>watch an AI play</small></button>
+        <button id="bSandbox"><i>iii.</i> Sandbox <small>build, spawn, break</small></button>
       </nav>
       <nav class="minor">
         <button id="bCamp">Basecamp</button>
@@ -183,6 +184,12 @@
       <nav class="menu"><button id="bEndingGo"><i>&rarr;</i> Continue</button></nav>
     </section>
     <div id="intro" class="hidden"><p id="introLine"></p><span class="skip">Press any key to skip</span></div>
+    <aside id="sandbox" class="hidden">
+      <div class="sbtop"><b>Sandbox</b><span>Tab hides this</span></div>
+      <div class="tabs" id="sbTabs"><button data-t="spawn">Spawn</button><button data-t="build">Build</button><button data-t="kit">Kit</button><button data-t="cards">Cards</button><button data-t="world">World</button></div>
+      <p id="sbInfo" class="sbinfo"></p>
+      <div id="sbGrid" class="sbgrid"></div>
+    </aside>
     <div id="autobar" class="hidden"><span>Auto climb · a simulation, nothing is kept</span><button data-sp="1">1×</button><button data-sp="2">2×</button><button data-sp="4">4×</button><button id="bAutoStop">Stop</button></div>
     <div id="tut" class="hidden"><div class="fig" id="tutStep"></div><div class="nm" id="tutTitle"></div><div class="ds" id="tutText"></div></div>
     <div id="toast" class="hidden"></div>

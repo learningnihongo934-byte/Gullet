@@ -71,3 +71,15 @@ for (const c of CHARS) { const g = new Game({ coop: false, metas: [{ char: c.id 
   ok(dr.tiles.join('').split('~').length > 6 || t.ambush, 'acid crept in from the walls');
 }
 console.log('all systems ok');
+// sandbox
+{
+  const g = new Game({ coop: false, metas: [{}], sandbox: true }), p = g.players[0];
+  g.sbTile(5, 5, 'o'); g.sbTile(6, 5, '~'); g.sbProp('sac', 120, 80);
+  for (const t of ['grub', 'migraine', 'optic', 'twins']) g.sbSpawn(t, 200, 100);
+  g.sbRebuild(p, {}, 'lance', 'brick'); g.giveItem(p, 'sword', true); g.giveItem(p, 'sword', true);
+  g.sbFloor(10); g.god = true;
+  for (let i = 0; i < 600; i++) g.update(1 / 60, [{ ax: 1 }]); g.events = [];
+  ok(g.room.tiles[5][5] === 'o' && g.props.length === 1 && p.weapon === 'lance' && p.char === 'brick' && p.items.length === 2 && p.hp > 0 && g.state === 'play', `sandbox: tiles, props, ${g.enemies.length} enemies/organs alive, kit swapped, god mode held`);
+  g.sbClear('enemies'); g.sbClear('room');
+  ok(!g.enemies.length && g.room.tiles[5][5] === '.' && !g.props.length, 'sandbox: clear enemies and room');
+}

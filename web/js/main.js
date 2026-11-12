@@ -5,6 +5,7 @@ import { Game } from './sim.js';
 import { Renderer } from './render.js';
 import { Net, Mirror } from './net.js';
 import { botInput } from './bot.js';
+import { mountSandbox } from './sandbox.js';
 import { initAudio, sfx, setMusic, setPrefs } from './audio.js';
 
 const $ = s => document.querySelector(s);
@@ -24,8 +25,9 @@ meta.beasts = meta.beasts || {};
 let metaDirty = false;
 const hasWeapon = id => { const w = WEAPON[id]; return !!w && (!w.boss || (meta.wun || []).includes(id)); };
 setInterval(() => { if (metaDirty) { metaDirty = false; saveMeta(); } }, 4000);
-const VERSION = '1.9';
+const VERSION = '2.0';
 const LOG = [
+  { v: '2.0', date: 'November 12, 2026', notes: ['Sandbox: an open room where you can spawn any of the 38 monsters and 12 organs, paint the floor with lumps, teeth, acid and walls, place pods, sacs, pores and spikes, switch between all twelve body parts, save layouts to three slots, and hand yourself any weapon, climber, active item or card. God mode, frozen AI, infinite bombs and slow motion included. Tab hides the panel.'] },
   { v: '1.9', date: 'November 12, 2026', notes: ['Living rooms: flesh pods and bone piles to shoot open (something might be living inside), bile sacs that explode and chain into each other, pores that spit, and spike floors that rise on a beat. Some rooms digest you: acid creeps in from the walls until the room is clear.', 'Champions: rare enemies with a coloured glow and a twist. They can be swift, splitting, armoured, volatile, regenerating, ghostly or giant, and they drop extra loot.', 'Fights arrive in new ways: enemies drop from the ceiling, tear out of the walls, or wait until you reach the middle of an empty-looking room.', 'Climbers now walk and run properly instead of hopping, and the title menu fits on its plate.'] },
   { v: '1.8', date: 'November 12, 2026', notes: ['A tutorial for first-time climbers: The Mouth teaches moving, salt, dashing, levelling up, bombs, secret rooms and active items, one step at a time. It runs after the prologue the first time you play, and you can replay it from the menu.', 'The Tailor: spend marrow on 8 skins, 8 hats and 6 trails. Your look follows you into co-op.', 'Auto climb: watch an AI climb an infinite tower, at up to 4× speed. It is only a simulation, so no marrow, cards or records are kept.', 'Balance: fewer free caches (challenge rooms pay one cache and teeth, golden enemies drop teeth, a heart and a bomb) and levels take a little more XP.', 'The desktop app is out for Mac and Windows on GitHub Releases.'] },
   { v: '1.7', date: 'November 12, 2026', notes: ['A prologue: a short animated opening tells how the tower began. Watch it again from the menu.', 'Game feel: hits freeze the action for a split second, enemies squash when struck and burst when they die, damage numbers pop up (crits in gold), organs die in slow motion with a white flash, and every sound hits harder.', 'Bombs (E): they blast enemies, break lumps and teeth, and crack open hidden walls.', 'Active items (Q): eight of them, charged by kills: Stomach Pump, Ice Tray, Gauze Roll, Salt Lick, Smoke Bomb, Rubber Chicken, Lodestone and Spittoon.', 'Six climbers: Wren, Brick, Pip, Old Mags, Hollow and Fang, each with their own look and quirk. Unlock them by climbing.', 'Mr. Tapewell, the parasite in the top hat, now runs every shop and has opinions.', 'Notes from the climbers who came before: 18 of them, telling the story of the tower in order.', 'Endings for stopping the Heart and the Mind.', 'Secret rooms behind cracked walls, golden mini-bosses, three-wave challenge rooms and pitch-dark rooms.'] },
@@ -66,6 +68,7 @@ addEventListener('keydown', e => {
   if (!keys.has(k) && k === 'q' && mode !== 'menu') { useEdge = true; useSeq++; }
   keys.add(k);
   if (mode === 'intro') { endIntro(); return; }
+  if (k === 'tab' && game && game.sandbox && mode === 'solo') { e.preventDefault(); SB.toggle(); return; }
   if (k === 'escape' && mode !== 'menu') togglePause();
   if (['1', '2', '3', '4', '5'].includes(k) && !paused) pickCard(+k - 1);
 });
@@ -251,7 +254,7 @@ const SFX = { fuse: 'fuse', bigboom: 'bigboom', secret: 'secret', active: 'activ
 function handleEvents(view, evs) {
   for (const e of evs) {
     R.fx(view, e);
-    const rec = !(view.auto);
+    const rec = !(view.auto || view.sandbox);
     if (rec && (e.k === 'die' || e.k === 'bossdie') && e.ty) { meta.beasts[e.ty] = (meta.beasts[e.ty] || 0) + 1; metaDirty = true; }
     if (rec && e.k === 'bossdie') { const w = WEAPONS.find(x => x.boss === e.ty); if (w && !(meta.wun = meta.wun || []).includes(w.id)) { meta.wun.push(w.id); saveMeta(); setTimeout(() => toast(`<div class="fig">New weapon</div><div class="nm">${w.name}</div><div class="ds">${w.desc}</div><div class="fl">Pick it before your next climb.</div>`, 4500), 2600); } }
     if (SFX[e.k]) sfx(SFX[e.k]);
@@ -290,11 +293,12 @@ function beginRun(save) {
   if (!save && !game.tut && !game.auto) { meta.stats.climbs++; saveMeta(); }
   handleEvents(game, game.events.filter(e => e.k === 'boss')); game.events = [];
 }
-function saveRun() { if (game && (game.tut || game.auto)) return; if (game && game.state === 'play' && (mode === 'solo' || mode === 'host')) store.set(RUN, game.toSave()); }
+function saveRun() { if (game && (game.tut || game.auto || game.sandbox)) return; if (game && game.state === 'play' && (mode === 'solo' || mode === 'host')) store.set(RUN, game.toSave()); }
 addEventListener('beforeunload', saveRun);
 addEventListener('visibilitychange', () => { if (document.hidden) saveRun(); });
 
 function finishRun() {
+  if (game && game.sandbox) return;
   if (game && game.auto) {
     if (endShown) return; endShown = true; sfx('dead'); setMusic(-1); $('#autobar').classList.add('hidden');
     const F = FL(game.fi), p = game.players[0];
@@ -339,7 +343,7 @@ const againSolo = () => { leaveNet(); startSolo(null); };
 $('#bAgain').onclick = againSolo;
 $('#bEndCamp').onclick = () => { leaveNet(); toMenu(); show('camp'); };
 $('#bEndTitle').onclick = () => { leaveNet(); toMenu(); };
-function toMenu() { $('#tut').classList.add('hidden'); $('#autobar').classList.add('hidden'); mode = 'menu'; game = null; mirror = null; paused = false; setMusic(-1); show('title'); }
+function toMenu() { SB.close(); $('#tut').classList.add('hidden'); $('#autobar').classList.add('hidden'); mode = 'menu'; game = null; mirror = null; paused = false; setMusic(-1); show('title'); }
 function leaveNet() { if (net) { net.close(); net = null; } }
 
 // ---------- pause
@@ -361,7 +365,7 @@ function togglePause() {
       for (const id of p.items || []) { const it = ITEM[id]; if (!it) continue; const d = document.createElement('div'); d.className = 'it'; d.title = it.desc; d.innerHTML = `<img alt="" src="${SPR['i_' + id].c.toDataURL()}">${it.name}`; list.appendChild(d); }
     });
     $('#bSaveQuit').classList.toggle('hidden', mode === 'guest');
-    $('#bSaveQuit').innerHTML = game && game.tut ? '<i>iv.</i> Skip the tutorial' : '<i>iv.</i> Save and quit';
+    $('#bSaveQuit').innerHTML = game && game.tut ? '<i>iv.</i> Skip the tutorial' : game && game.sandbox ? '<i>iv.</i> Leave the sandbox' : '<i>iv.</i> Save and quit';
     $('#bAbandon').innerHTML = mode === 'guest' ? '<i>iv.</i> Leave the climb' : '<i>v.</i> Abandon the climb';
     prefsLabels();
     show('pause');
@@ -371,10 +375,11 @@ function prefsLabels() { $('#bMusic').innerHTML = `<i>ii.</i> Music: ${meta.pref
 $('#bResume').onclick = () => togglePause();
 $('#bMusic').onclick = () => { meta.prefs.music = !meta.prefs.music; setPrefs(meta.prefs.music, meta.prefs.sfx); saveMeta(); prefsLabels(); };
 $('#bSfx').onclick = () => { meta.prefs.sfx = !meta.prefs.sfx; setPrefs(meta.prefs.music, meta.prefs.sfx); saveMeta(); prefsLabels(); };
-$('#bSaveQuit').onclick = () => { if (game && game.tut) { endTutorial(false); return; } saveRun(); leaveNet(); toMenu(); };
+$('#bSaveQuit').onclick = () => { if (game && game.sandbox) { toMenu(); return; } if (game && game.tut) { endTutorial(false); return; } saveRun(); leaveNet(); toMenu(); };
 $('#bAbandon').onclick = () => {
   if (mode === 'guest') { leaveNet(); toMenu(); return; }
   if (game && game.tut) { endTutorial(false); return; }
+  if (game && game.sandbox) { toMenu(); return; }
   const b = $('#bAbandon');
   if (!b.dataset.sure) { b.dataset.sure = '1'; b.innerHTML = '<i>v.</i> Click again to abandon (you keep your marrow)'; setTimeout(() => { delete b.dataset.sure; b.innerHTML = '<i>v.</i> Abandon the climb'; }, 3000); return; }
   delete b.dataset.sure;
@@ -572,6 +577,17 @@ document.querySelectorAll('#autobar [data-sp]').forEach(b => b.onclick = () => s
 $('#bAutoStop').onclick = () => { $('#autobar').classList.add('hidden'); toMenu(); };
 $('#bAuto').onclick = () => startAuto();
 
+// ---------- Sandbox
+const SB = mountSandbox({ getGame: () => game, meta, saveMeta, sfx, toast: (h, ms) => toast(h, ms), bossPics: () => BOSS_PIC(), canvas: cv });
+function startSandbox() {
+  initAudio();
+  game = new Game({ coop: false, metas: [{ ...meta, weapon: hasWeapon(meta.weapon) ? meta.weapon : 'salt', char: charOpen(CHAR[meta.char] || CHAR.wren) ? meta.char : 'wren' }], sandbox: true });
+  game.me = 0; mode = 'solo'; paused = false; endShown = false;
+  show(null); setMusic(0); SB.open();
+  toast('<div class="fig">Sandbox</div><div class="ds">Spawn anything, paint the room, hand yourself any kit. Tab hides the panel. Nothing here counts toward your records.</div>', 4500);
+}
+$('#bSandbox').onclick = () => startSandbox();
+
 // ---------- tutorial: The Mouth
 function startTutorial() {
   initAudio();
@@ -620,7 +636,8 @@ function frame(now) {
     if (game.hitStop > 0) { game.hitStop -= dt; }
     else if (run && game.state === 'play') {
       if (game.slowmo > 0) game.slowmo -= dt;
-      acc += (game.slowmo > 0 ? dt * 0.3 : dt) * (game.auto ? autoSpeed : 1);
+      acc += (game.slowmo > 0 ? dt * 0.3 : dt) * (game.auto ? autoSpeed : game.sandbox ? SB.speed : 1);
+      if (game.sandbox) SB.tick();
       while (acc >= STEP) {
         const g = { ...guestIn, dash: !!guestIn.dashPending, bomb: !!guestIn.bombPending, use: !!guestIn.usePending }; guestIn.dashPending = guestIn.bombPending = guestIn.usePending = false;
         game.update(STEP, [game.auto ? botInput(game, game.players[0]) : readInput(game, 0), mode === 'host' ? g : {}]);
