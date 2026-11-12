@@ -319,7 +319,7 @@ $('#bAbandon').onclick = () => {
 // ---------- co-op lobby
 function resetLobby() {
   $('#roomCode').textContent = ''; $('#hostStatus').textContent = ''; $('#joinStatus').textContent = '';
-  $('#bStartCoop').classList.add('hidden'); $('#bInfCoop').classList.add('hidden'); $('#bContCoop').classList.add('hidden'); $('#bHost').disabled = false;
+  $('#bStartCoop').classList.add('hidden'); $('#bContCoop').classList.add('hidden'); $('#bHost').disabled = false;
   guestMeta = null;
 }
 $('#bHost').onclick = async () => {
@@ -344,8 +344,9 @@ $('#bJoin').onclick = () => {
   net.join(code);
 };
 $('#joinCode').addEventListener('keydown', e => { if (e.key === 'Enter') $('#bJoin').click(); });
-$('#bStartCoop').onclick = () => startCoop(null);
-$('#bInfCoop').onclick = () => startCoop(null, true);
+let coopEndless = false;
+document.querySelectorAll('#coopModes button').forEach(b => b.onclick = () => { coopEndless = b.dataset.mode === 'inf'; document.querySelectorAll('#coopModes button').forEach(x => x.classList.toggle('on', x === b)); if (net && net.role === 'guest') $('#joinStatus').textContent = 'The host picks the mode.'; });
+$('#bStartCoop').onclick = () => startCoop(null, coopEndless);
 $('#bContCoop').onclick = () => { const run = store.get(RUN, null); if (run) startCoop(run); };
 
 function onHostMsg(m) {
@@ -360,7 +361,7 @@ function onHostMsg(m) {
     guestMeta = m.meta || {};
     if (!game) {
       $('#hostStatus').textContent = 'Your friend is here.';
-      $('#bStartCoop').classList.remove('hidden'); $('#bInfCoop').classList.remove('hidden');
+      $('#bStartCoop').classList.remove('hidden');
       const run = store.get(RUN, null);
       $('#bContCoop').classList.toggle('hidden', !(run && run.coop));
     }
@@ -376,11 +377,11 @@ function startCoop(save, endless = false) {
   game = new Game({ coop: true, metas: [meta, guestMeta || {}], save, endless });
   game.me = 0; game.players[1].present = true;
   mode = 'host'; paused = false; endShown = false;
-  net.send({ t: 'start' }); net.send(game.roomMsg());
+  net.send({ t: 'start', endless: game.endless }); net.send(game.roomMsg());
   beginRun(save);
 }
 function onGuestMsg(m) {
-  if (m.t === 'start') { if (mode !== 'guest') { mirror = new Mirror(); mode = 'guest'; endShown = false; show(null); setMusic(0); } }
+  if (m.t === 'start') { if (mode !== 'guest') { mirror = new Mirror(); mirror.endless = !!m.endless; mode = 'guest'; endShown = false; show(null); setMusic(0); const F = FL(0); card(F.plate, m.endless ? 'Infinite climb' : F.name, m.endless ? 'Past the heart, and on forever.' : F.note); } }
   if (m.t === 'room' && mirror) {
     const floorChanged = mirror.fi !== m.fi;
     mirror.applyRoom(m);

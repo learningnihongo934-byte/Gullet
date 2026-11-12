@@ -65,7 +65,8 @@
     <section id="coop" class="screen plate hidden">
       <div class="plate-head"><span>Plate 0a</span><span>Two Climbers, One Rope</span></div>
       <h2>Climb with a friend</h2>
-      <p class="sub">One of you opens a room and shares the four-letter code. The other joins with it. The host's computer runs the climb.</p>
+      <p class="sub">One of you opens a room and shares the four-letter code. The other joins with it. The host picks the mode and runs the climb.</p>
+      <div class="armrow"><span>Mode:</span><div class="modes" id="coopModes"><button data-mode="heart" class="on">To the heart <small>6 plates</small></button><button data-mode="inf">Infinite <small>beyond the heart</small></button></div></div>
       <div class="armrow"><span>Your weapon:</span><div id="coopWeapons"></div></div>
       <div class="cols">
         <div>
@@ -73,8 +74,7 @@
           <button id="bHost" class="ink">Open a room</button>
           <p class="code" id="roomCode"></p>
           <p class="status" id="hostStatus"></p>
-          <button id="bStartCoop" class="ink hidden">Start a new climb</button>
-          <button id="bInfCoop" class="ink hidden">Start an infinite climb</button>
+          <button id="bStartCoop" class="ink hidden">Start the climb</button>
           <button id="bContCoop" class="ink hidden">Continue our saved climb</button>
         </div>
         <div>

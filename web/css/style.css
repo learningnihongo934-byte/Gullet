@@ -92,7 +92,11 @@ input#joinCode { font: inherit; font-family: 'IM Fell English SC', serif; font-s
 .wcard.lock b { color: var(--faint); }
 .wcard:hover, .wcard:focus-visible, .wcard.on { outline: 2px solid var(--red); outline-offset: 1px; background: rgba(255,255,255,.55); }
 .armrow { display: flex; align-items: center; gap: .6em; margin: .2em 0 .7em; flex-wrap: wrap; }
-.armrow span { font-family: 'IM Fell English SC', serif; }
+.armrow > span { font-family: 'IM Fell English SC', serif; min-width: 5.5em; }
+.modes { display: flex; gap: .4em; flex-wrap: wrap; }
+.modes button { pointer-events: auto; cursor: pointer; font: inherit; color: var(--ink); background: rgba(255,255,255,.3); border: 1px solid var(--faint); padding: .15em .6em; }
+.modes button small { color: var(--faint); font-style: italic; font-size: .75em; }
+.modes button.on { border-color: var(--red); outline: 2px solid var(--red); color: var(--red); background: rgba(255,255,255,.6); }
 #coopWeapons { display: flex; gap: .3em; flex-wrap: wrap; }
 #coopWeapons button { pointer-events: auto; cursor: pointer; background: none; border: 1px solid var(--faint); padding: .15em; display: flex; }
 #coopWeapons button.on { border-color: var(--red); outline: 2px solid var(--red); }
