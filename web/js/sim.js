@@ -17,6 +17,7 @@ export class Game {
     this.state = 'play'; this.shake = 0; this.roomT = 0; this.wantSave = false; this.roomChanged = true;
     this.valve = null; this.biteT = 4; this.winT = 0;
     if (o.save) this.load(o.save); else this.fresh(o.metas || [{}]);
+    if (o.tutorial) this.setupTutorial();
     this.enterRoom(this.room, null);
   }
 
@@ -33,6 +34,7 @@ export class Game {
       this.teeth += 8 * (up.teeth || 0);
       if (up.lunch) p.pend = 1;
       p.char = CHAR[meta.char] ? meta.char : 'wren'; CHAR[p.char].apply(p.st, p, this); p.hp = p.st.maxhp;
+      p.look = { ...(meta.look || {}) };
     }
     this.loadFloor(0);
   }
@@ -43,7 +45,7 @@ export class Game {
   load(s) {
     this.endless = !!s.endless;
     Object.assign(this, { seed: s.seed, fi: s.fi, time: s.time, kills: s.kills, bosses: s.bosses, marrow: s.marrow, teeth: s.teeth, pool: s.pool, floor: s.floor, xp: s.xp || 0, level: s.level || 1 });
-    this.players = s.players.map((q, i) => { const p = this.makePlayer(i, Object.assign(baseStats(), q.st)); p.items = q.items; p.hp = q.hp; p.present = i === 0; p.pend = q.pend || 0; p.offer = q.offer || null; p.revives = q.revives ?? p.st.revive; p.weapon = q.weapon || 'salt'; p.streak = q.streak || 0; p.char = q.char || 'wren'; p.bombs = q.bombs ?? 1; p.active = q.active || null; p.charge = q.charge || 0; if (p.char === 'pip') p.r = 4; return p; });
+    this.players = s.players.map((q, i) => { const p = this.makePlayer(i, Object.assign(baseStats(), q.st)); p.items = q.items; p.hp = q.hp; p.present = i === 0; p.pend = q.pend || 0; p.offer = q.offer || null; p.revives = q.revives ?? p.st.revive; p.weapon = q.weapon || 'salt'; p.streak = q.streak || 0; p.char = q.char || 'wren'; p.look = q.look || {}; p.bombs = q.bombs ?? 1; p.active = q.active || null; p.charge = q.charge || 0; if (p.char === 'pip') p.r = 4; return p; });
     if (this.coop && this.players.length < 2) this.players.push(Object.assign(this.makePlayer(1, statsFor({})), { present: false }));
     this.room = this.floor.rooms.find(r => r.key === s.cur) || this.floor.rooms.find(r => r.type === 'start');
   }
@@ -54,7 +56,7 @@ export class Game {
     const fr = floor.rooms.find(r => r.key === room.key);
     fr.drops = drops;
     return { v: 1, coop: this.coop, endless: this.endless, seed: this.seed, fi: this.fi, time: this.time, kills: this.kills, bosses: this.bosses, marrow: this.marrow,
-      teeth: this.teeth, pool: this.pool, floor, cur: room.key, xp: this.xp, level: this.level, players: this.players.map(p => ({ st: p.st, items: p.items, hp: Math.max(1, p.hp), pend: p.pend, offer: p.offer, revives: p.revives, weapon: p.weapon, streak: p.streak, char: p.char, bombs: p.bombs, active: p.active, charge: p.charge })) };
+      teeth: this.teeth, pool: this.pool, floor, cur: room.key, xp: this.xp, level: this.level, players: this.players.map(p => ({ st: p.st, items: p.items, hp: Math.max(1, p.hp), pend: p.pend, offer: p.offer, revives: p.revives, weapon: p.weapon, streak: p.streak, char: p.char, look: p.look, bombs: p.bombs, active: p.active, charge: p.charge })) };
   }
   drawItem() {
     if (!this.pool.length) this.pool = ITEMS.map(i => i.id);
@@ -218,6 +220,7 @@ export class Game {
     }
     this.checkClear();
     this.updateOffers();
+    if (this.tut) this.tutorialTick(dt);
     if (this.winT > 0) { this.winT -= dt; if (this.winT <= 0) { this.state = 'won'; this.ev({ k: 'won' }); } }
     if (this.state === 'play') { this.checkExit(); this.checkValve(); }
     if (!this.alive().length && this.state === 'play') { this.state = 'dead'; this.ev({ k: 'dead' }); }
@@ -238,7 +241,7 @@ export class Game {
       // dash the way you're moving, or the way you're facing when standing still
       let dx = mx, dy = my;
       if (l <= 0.1) { const F = { u: [0, -1], d: [0, 1], l: [-1, 0], r: [1, 0] }[p.face] || [0, 1]; dx = F[0]; dy = F[1]; }
-      p.dashT = 0.17; p.dashCd = st.dashCD; p.dx = dx; p.dy = dy; this.ev({ k: 'dash', p: p.id });
+      p.dashT = 0.17; p.dashCd = st.dashCD; p.dx = dx; p.dy = dy; this.ev({ k: 'dash', p: p.id }); p.dashes = (p.dashes || 0) + 1;
       if (st.dashBurst) for (let i = 0; i < 8 * st.dashBurst; i++) this.pbullet(p, p.x, p.y - 4, i * TAU / (8 * st.dashBurst), st.shotSpeed * 0.8, st.dmg * st.dmgMul * 0.7, { life: 0.35 });
     }
     let vx, vy;
@@ -324,6 +327,7 @@ export class Game {
     p.streak = 0; p.roomHit = true;
     if (p.st.fragile) amt *= 2;
     p.hp -= amt; p.inv = 1.0;
+    if (this.tut && p.hp < 2) p.hp = 2;
     this.ev({ k: 'hurt', p: p.id, x: p.x, y: p.y }); this.shake = Math.max(this.shake, 4);
     if (p.st.hurtFreeze) { for (const e of this.enemies) e.stun = Math.max(e.stun || 0, (e.boss ? 0.8 : 1.6) * p.st.hurtFreeze); this.ev({ k: 'freeze' }); }
     if (p.st.hurtBurst) for (let i = 0; i < 10 * p.st.hurtBurst; i++) this.pbullet(p, p.x, p.y - 4, i * TAU / (10 * p.st.hurtBurst), p.st.shotSpeed, p.st.dmg * p.st.dmgMul, { life: 0.6 });
@@ -455,9 +459,10 @@ export class Game {
       const tgt = this.nearestPlayer(e);
       if (e.stun > 0) e.stun -= dt;
       else if (e.boss) this.bossAI(e, dt, tgt);
+      else if (e.dummy) { if (e.dummy === 2) { e.t -= dt; e.st = e.t < 0.5 ? 'wind' : 'idle'; if (e.t <= 0 && tgt) { e.t = 1.1; this.fan(e, tgt, 3, 0.3, 55, 'b'); } } }
       else if (tgt) this.ai(e, dt, tgt, (e.poison ? 0.65 : 1) * (e.slowT > 0 ? 0.5 : 1) * (1 - Math.min(0.35, this.slowAll || 0)));
       if (!e.boss) { this.move(e, e.kx * dt, e.ky * dt, e.fly ? 'f' : 'e'); const k = Math.pow(0.002, dt); e.kx *= k; e.ky *= k; }
-      if (!e.under && e.z < 10 && e.st !== 'intro') {
+      if (!e.under && e.z < 10 && e.st !== 'intro' && !e.dummy) {
         for (const p of this.players) {
           if (!p.present || p.down) continue;
           if (Math.hypot(p.x - e.x, p.y - e.y) < e.r + p.r - 1) { this.hurt(p, 1); if (p.st.thorns && !(e.thornT > 0)) { e.thornT = 0.4; this.damage(e, (3 + p.st.dmg) * p.st.thorns, p); } }
@@ -1053,6 +1058,49 @@ export class Game {
     for (const o of this.enemies) if (!o.dead && !o.under && o.spawnT <= 0 && Math.hypot(o.x - x, o.y - y) < 28 + o.r) this.damage(o, 4 + dmg * 1.5, p);
   }
 
+  // ---------- the tutorial: two rooms in the mouth, one lesson at a time
+  setupTutorial() {
+    const wall = (doors, secretE) => {
+      const g = [];
+      for (let y = 0; y < RH; y++) { let row = ''; for (let x = 0; x < RW; x++) row += x === 0 || y === 0 || x === RW - 1 || y === RH - 1 ? '#' : '.'; g.push([...row]); }
+      for (const d of doors) { const [x, y] = DOORS[d]; g[y][x] = 'D'; }
+      g[2][3] = 'o'; g[8][15] = 'o'; g[2][15] = 't';
+      return g.map(r => r.join(''));
+    };
+    const a = { gx: 4, gy: 4, key: '4,4', type: 'start', doors: {}, secret: { e: true }, tiles: wall([]), cleared: true, visited: true, drops: [] };
+    const b = { gx: 5, gy: 4, key: '5,4', type: 'secret', doors: { w: true }, tiles: wall(['w']), cleared: true, visited: false, drops: [], active: 'pump' };
+    this.floor = { fi: 0, seed: this.seed, rooms: [a, b] };
+    this.tut = { step: -1, t: 0, x0: 0, y0: 0 };
+    for (const p of this.players) { p.bombs = 0; p.active = null; p.charge = 0; }
+    this.enterRoom(a, null);
+    this.tutStep(0);
+  }
+  tutStep(n) {
+    const T = this.tut, p = this.players[0];
+    T.step = n; T.t = 0;
+    const say = (title, text) => this.ev({ k: 'tut', step: n, title, text });
+    if (n === 0) { T.x0 = p.x; T.y0 = p.y; say('Move', 'Walk around with W, A, S and D.'); }
+    if (n === 1) { for (const [dx, dy] of [[-60, -40], [0, -50], [60, -40]]) this.addEnemy('grub', CX + dx, CY + dy, { dummy: 1, spawnT: 0.6, hp: 6, max: 6 }); say('Throw salt', 'Salt is the only thing the tower fears. Throw it with the arrow keys, or hold the mouse button. Clear the three grubs.'); }
+    if (n === 2) { this.addEnemy('spitter', CX, OY + 40, { dummy: 2, spawnT: 0.6, hp: 9999, max: 9999, t: 1.5 }); p.dashes = 0; say('Dash', 'Press Space to dash. While you dash, nothing can hit you. Dash through the spit twice.'); }
+    if (n === 3) { this.enemies = []; this.bullets = this.bullets.filter(b => !b.en); this.levelUp(); say('Level up', 'Every kill feeds your level. When the room is clear, keep one of three cards with 1, 2 or 3, or click one.'); }
+    if (n === 4) { this.pickups.push({ kind: 'bomb', x: CX + 40, y: CY + 20, v: 1 }); say('Bombs', 'Pick up the bomb. The wall on the right is cracked: stand near it and press E, then step back.'); }
+    if (n === 5) say('Secret room', 'Bombs open hidden rooms. Go through and grab the active item.');
+    if (n === 6) { p.charge = 99; for (const [dx, dy] of [[-40, -20], [40, -20], [0, 30]]) this.addEnemy('grub', CX + dx, CY + dy, { dummy: 1, spawnT: 0.6, hp: 8, max: 8 }); say('Active items', 'Press Q to use your active item. Kills charge it back up.'); }
+    if (n === 7) { this.enemies = []; this.valve = { x: CX, y: CY - 14 }; say('Up', 'That is everything. Climb the rope to start your first real climb. Esc pauses any time.'); }
+  }
+  tutorialTick(dt) {
+    const T = this.tut, p = this.players[0];
+    T.t += dt;
+    if (T.step === 0 && Math.hypot(p.x - T.x0, p.y - T.y0) > 60) this.tutStep(1);
+    else if (T.step === 1 && T.t > 1 && !this.enemies.length) this.tutStep(2);
+    else if (T.step === 2 && (p.dashes || 0) >= 2) this.tutStep(3);
+    else if (T.step === 3 && !p.offer && !p.pend && p.items.length) this.tutStep(4);
+    else if (T.step === 4 && this.room.doors.e) this.tutStep(5);
+    else if (T.step === 5 && p.active) this.tutStep(6);
+    else if (T.step === 6 && T.t > 0.8 && (!this.enemies.length || p.charge < 6)) { if (!this.enemies.length) this.tutStep(7); }
+    if (T.step === 4 && p.bombs === 0 && !this.pickups.some(k => k.kind === 'bomb') && !this.hazards.some(h => h.k === 'bomb') && !this.room.doors.e) this.pickups.push({ kind: 'bomb', x: CX + 40, y: CY + 20, v: 1 });
+  }
+
   // ---------- bombs, actives, the shopkeeper
   explode(p, x, y) {
     this.ev({ k: 'boom', x, y, r: 34 }); this.ev({ k: 'bigboom' }); this.shake = Math.max(this.shake, 9);
@@ -1228,7 +1276,7 @@ export class Game {
   }
   checkValve() {
     if (!this.valve) return;
-    for (const p of this.alive()) if (Math.hypot(p.x - this.valve.x, p.y - this.valve.y) < 10) { this.nextFloor(); return; }
+    for (const p of this.alive()) if (Math.hypot(p.x - this.valve.x, p.y - this.valve.y) < 10) { if (this.tut) { this.state = 'tutdone'; this.ev({ k: 'tutdone' }); return; } this.nextFloor(); return; }
   }
   nextFloor() {
     this.loadFloor(this.fi + 1);
@@ -1248,7 +1296,7 @@ export class Game {
     const r1 = v => Math.round(v * 10) / 10;
     return {
       t: 's', tm: r1(this.time), te: this.teeth, xp: this.xp, nd: this.xpNeed(), lv: this.level, en: this.enemies.length, ma: this.marrow, cl: this.room.cleared ? 1 : 0, st: this.state, sh: r1(this.shake), rt: r1(this.roomT),
-      P: this.players.map(p => ({ x: r1(p.x), y: r1(p.y), hp: p.hp, mh: p.st.maxhp, ob: p.st.orbit, inv: r1(p.inv), dn: p.down ? 1 : 0, f: p.face, mv: p.moving ? 1 : 0, an: r1(p.anim), da: p.dashT > 0 ? 1 : 0, pr: p.present ? 1 : 0, sh: p.shieldUp ? 1 : 0, au: p.st.aura, bd: p.st.buddy, wp: p.weapon, chr: p.char, bm: p.bombs, ac: p.active, cg: p.charge, fr: p.frenzy > 0 ? 1 : 0, oa: r1(p.orbA), it: p.items, pd: p.pend, of: p.offer })),
+      P: this.players.map(p => ({ x: r1(p.x), y: r1(p.y), hp: p.hp, mh: p.st.maxhp, ob: p.st.orbit, inv: r1(p.inv), dn: p.down ? 1 : 0, f: p.face, mv: p.moving ? 1 : 0, an: r1(p.anim), da: p.dashT > 0 ? 1 : 0, pr: p.present ? 1 : 0, sh: p.shieldUp ? 1 : 0, au: p.st.aura, bd: p.st.buddy, wp: p.weapon, chr: p.char, lk: p.look, bm: p.bombs, ac: p.active, cg: p.charge, fr: p.frenzy > 0 ? 1 : 0, oa: r1(p.orbA), it: p.items, pd: p.pend, of: p.offer })),
       E: this.enemies.map(e => ({ id: e.id, ty: e.type, x: r1(e.x), y: r1(e.y), r: e.r, fl: e.flash > 0 ? 1 : 0, hp: r1(e.hp), mx: r1(e.max), s: e.st, b: e.boss ? 1 : 0, sp: r1(e.spawnT), z: r1(e.z || 0),
         sg: e.segs ? e.segs.map(s => [r1(s[0]), r1(s[1])]) : undefined, pu: r1(e.pulse || 0), br: r1(e.br || 0), a: r1(e.a || 0), ag: r1(e.age), sm: e.small ? 1 : 0, el: e.elite ? 1 : 0, u: e.under ? 1 : 0, hd: e.hide ? 1 : 0, sr: e.segR, ln: e.beamLen, t: r1(e.t), bu: e.burn ? 1 : 0, po: e.poison ? 1 : 0 })),
       B: this.bullets.flatMap(b => [r1(b.x), r1(b.y), Math.round(b.vx), Math.round(b.vy), r1(b.r), b.k, b.en ? 1 : 0]),

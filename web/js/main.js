@@ -1,6 +1,6 @@
 // Gullet: menus, input, saving, the game loop, and co-op wiring.
-import { W, H, FLOORS, FL, ITEM, ITEMS, UPGRADES, BOSSES, WEAPONS, WEAPON, ENEMIES, ACTIVES, ACTIVE, CHARS, CHAR, NOTES, ENDINGS } from './data.js';
-import { buildSprites, buildChars, SPR, bosses, whiteOf } from './sprites.js';
+import { W, H, FLOORS, FL, ITEM, ITEMS, UPGRADES, BOSSES, WEAPONS, WEAPON, ENEMIES, ACTIVES, ACTIVE, CHARS, CHAR, NOTES, ENDINGS, SKINS, HATS, TRAILS, SKIN, HAT, TRAIL } from './data.js';
+import { buildSprites, buildChars, SPR, bosses, whiteOf, climberSprite } from './sprites.js';
 import { Game } from './sim.js';
 import { Renderer } from './render.js';
 import { Net, Mirror } from './net.js';
@@ -23,8 +23,9 @@ meta.beasts = meta.beasts || {};
 let metaDirty = false;
 const hasWeapon = id => { const w = WEAPON[id]; return !!w && (!w.boss || (meta.wun || []).includes(id)); };
 setInterval(() => { if (metaDirty) { metaDirty = false; saveMeta(); } }, 4000);
-const VERSION = '1.7';
+const VERSION = '1.8';
 const LOG = [
+  { v: '1.8', date: 'November 12, 2026', notes: ['A tutorial for first-time climbers: The Mouth teaches moving, salt, dashing, levelling up, bombs, secret rooms and active items, one step at a time. It runs after the prologue the first time you play, and you can replay it from the menu.', 'The Tailor: spend marrow on 8 skins, 8 hats and 6 trails. Your look follows you into co-op.', 'The desktop app is out for Mac and Windows on GitHub Releases.'] },
   { v: '1.7', date: 'November 12, 2026', notes: ['A prologue: a short animated opening tells how the tower began. Watch it again from the menu.', 'Game feel: hits freeze the action for a split second, enemies squash when struck and burst when they die, damage numbers pop up (crits in gold), organs die in slow motion with a white flash, and every sound hits harder.', 'Bombs (E): they blast enemies, break lumps and teeth, and crack open hidden walls.', 'Active items (Q): eight of them, charged by kills: Stomach Pump, Ice Tray, Gauze Roll, Salt Lick, Smoke Bomb, Rubber Chicken, Lodestone and Spittoon.', 'Six climbers: Wren, Brick, Pip, Old Mags, Hollow and Fang, each with their own look and quirk. Unlock them by climbing.', 'Mr. Tapewell, the parasite in the top hat, now runs every shop and has opinions.', 'Notes from the climbers who came before: 18 of them, telling the story of the tower in order.', 'Endings for stopping the Heart and the Mind.', 'Secret rooms behind cracked walls, golden mini-bosses, three-wave challenge rooms and pitch-dark rooms.'] },
   { v: '1.6', date: 'November 12, 2026', notes: ['Infinite mode: the climb no longer stops at the heart. Six new body parts lie beyond it: the Liver, Kidneys, Tongue, Nerves, Eye and Brain, each with its own colours, music and organ to stop. After the Brain the whole tower loops, harder every time. Your deepest floor is recorded.', '30 new monsters: snipers that aim a line of light, bombers, healers, mine-laying moths, wall-crawlers, teleporting sparks, summoners, spinners, leapers, armoured vertebrae, swarms of ticks, and a molar that pretends to be a tooth on the floor.', 'Six new organs: the Bile Duke, the Twins, the Taster, the Ganglion, the Optic (watch the beam) and the Mind.', 'Six weapons won from organs: stop each of the first six for the first time to unlock the Acid Spitter, Bile Cannon, Wind Horn, Lamprey Ring, Marrow Lance and Heartstring.', 'The Index now holds 44 monsters and organs and all 12 weapons.'] },
   { v: '1.5', date: 'November 12, 2026', notes: ['The Index: every card, monster, organ and weapon in one place. What you have not found yet stays a silhouette.', 'A desktop app for Mac and Windows that runs fullscreen and works offline. Co-op still connects online.', 'The game now scales to fill your window.'] },
@@ -89,7 +90,7 @@ function readInput(view, me) {
 let mode = 'menu', paused = false, game = null, mirror = null, net = null;
 let lastGuestBs = 0, lastGuestUs = 0;
 let guestMeta = null, guestIn = {}, lastGuestDs = 0, snapT = 0, roomT = 0, pendingEv = [], endShown = false;
-const screens = ['title', 'coop', 'camp', 'help', 'pause', 'end', 'arm', 'log', 'index', 'ending'];
+const screens = ['title', 'coop', 'camp', 'help', 'pause', 'end', 'arm', 'log', 'index', 'ending', 'tailor'];
 function show(id) {
   for (const s of screens) $('#' + s).classList.toggle('hidden', s !== id);
   if (id === 'title') refreshTitle();
@@ -155,7 +156,7 @@ function renderCoopChars() {
     if (!charOpen(c)) continue;
     const b = document.createElement('button'); b.title = `${c.name}: ${c.quirk}`; b.className = (meta.char || 'wren') === c.id ? 'on' : '';
     b.innerHTML = `<img alt="${c.name}" src="${charImg(c)}">`;
-    b.onclick = () => { meta.char = c.id; saveMeta(); renderCoopChars(); if (net && net.role === 'guest') net.send({ t: 'hello', meta: { up: meta.up, weapon: meta.weapon, char: meta.char } }); };
+    b.onclick = () => { meta.char = c.id; saveMeta(); renderCoopChars(); if (net && net.role === 'guest') net.send({ t: 'hello', meta: { up: meta.up, weapon: meta.weapon, char: meta.char, look: meta.look } }); };
     box.appendChild(b);
   }
 }
@@ -165,7 +166,7 @@ function renderCoopWeapons() {
     if (!hasWeapon(w.id)) continue;
     const b = document.createElement('button'); b.title = `${w.name}: ${w.stats}`; b.className = meta.weapon === w.id ? 'on' : '';
     b.innerHTML = `<img alt="${w.name}" src="${SPR['w_' + w.id].c.toDataURL()}">`;
-    b.onclick = () => { meta.weapon = w.id; saveMeta(); renderCoopWeapons(); if (net && net.role === 'guest') net.send({ t: 'hello', meta: { up: meta.up, weapon: meta.weapon, char: meta.char } }); };
+    b.onclick = () => { meta.weapon = w.id; saveMeta(); renderCoopWeapons(); if (net && net.role === 'guest') net.send({ t: 'hello', meta: { up: meta.up, weapon: meta.weapon, char: meta.char, look: meta.look } }); };
     box.appendChild(b);
   }
 }
@@ -263,6 +264,7 @@ function handleEvents(view, evs) {
     if (e.k === 'gotactive' && e.p === view.me && !(meta.foundA = meta.foundA || []).includes(e.id)) { meta.foundA.push(e.id); metaDirty = true; }
     if (e.k === 'gotactive' && e.p === view.me) { const A = ACTIVE[e.id]; toast(`<div class="fig">Active item · Q to use</div><div class="nm">${A.name}</div><div class="ds">${A.desc}</div><div class="fl">${A.f}</div>`, 3600); }
     if (e.k === 'bossdie' && e.ty === 'mind' && meta.beasts.mind === 1) setTimeout(() => showEnding('mind', null), 2200);
+    if (e.k === 'tut') { $('#tutStep').textContent = `Lesson ${e.step + 1} of 8`; $('#tutTitle').textContent = e.title; $('#tutText').textContent = e.text; const t = $('#tut'); t.classList.add('hidden'); void t.offsetWidth; t.classList.remove('hidden'); sfx('note'); }
     if (e.k === 'down' && view.coop) toast(`<div class="ds">${e.p === view.me ? 'You went down. Your partner has to clear the room.' : 'Your partner went down. Clear the room to bring them back.'}</div>`, 2600);
   }
 }
@@ -281,14 +283,15 @@ function beginRun(save) {
   const F = FL(game.fi);
   card(F.plate, F.name, save ? 'Back where you left off.' : F.note);
   setMusic(game.fi, game.room.type === 'boss' && !game.room.cleared);
-  if (!save) { meta.stats.climbs++; saveMeta(); }
+  if (!save && !game.tut) { meta.stats.climbs++; saveMeta(); }
   handleEvents(game, game.events.filter(e => e.k === 'boss')); game.events = [];
 }
-function saveRun() { if (game && game.state === 'play' && (mode === 'solo' || mode === 'host')) store.set(RUN, game.toSave()); }
+function saveRun() { if (game && game.tut) return; if (game && game.state === 'play' && (mode === 'solo' || mode === 'host')) store.set(RUN, game.toSave()); }
 addEventListener('beforeunload', saveRun);
 addEventListener('visibilitychange', () => { if (document.hidden) saveRun(); });
 
 function finishRun() {
+  if (game && game.tut) { if (game.state === 'tutdone') { sfx('floor'); endTutorial(true); } return; }
   if (endShown) return; endShown = true;
   const won = game.state === 'won';
   const earned = game.marrow + game.fi * 8 + Math.floor(game.kills / 5) + (won ? 60 : 0);
@@ -324,7 +327,7 @@ function endScreen(r) {
 $('#bAgain').onclick = () => { leaveNet(); startSolo(null); };
 $('#bEndCamp').onclick = () => { leaveNet(); toMenu(); show('camp'); };
 $('#bEndTitle').onclick = () => { leaveNet(); toMenu(); };
-function toMenu() { mode = 'menu'; game = null; mirror = null; paused = false; setMusic(-1); show('title'); }
+function toMenu() { $('#tut').classList.add('hidden'); mode = 'menu'; game = null; mirror = null; paused = false; setMusic(-1); show('title'); }
 function leaveNet() { if (net) { net.close(); net = null; } }
 
 // ---------- pause
@@ -346,6 +349,7 @@ function togglePause() {
       for (const id of p.items || []) { const it = ITEM[id]; if (!it) continue; const d = document.createElement('div'); d.className = 'it'; d.title = it.desc; d.innerHTML = `<img alt="" src="${SPR['i_' + id].c.toDataURL()}">${it.name}`; list.appendChild(d); }
     });
     $('#bSaveQuit').classList.toggle('hidden', mode === 'guest');
+    $('#bSaveQuit').innerHTML = game && game.tut ? '<i>iv.</i> Skip the tutorial' : '<i>iv.</i> Save and quit';
     $('#bAbandon').innerHTML = mode === 'guest' ? '<i>iv.</i> Leave the climb' : '<i>v.</i> Abandon the climb';
     prefsLabels();
     show('pause');
@@ -355,9 +359,10 @@ function prefsLabels() { $('#bMusic').innerHTML = `<i>ii.</i> Music: ${meta.pref
 $('#bResume').onclick = () => togglePause();
 $('#bMusic').onclick = () => { meta.prefs.music = !meta.prefs.music; setPrefs(meta.prefs.music, meta.prefs.sfx); saveMeta(); prefsLabels(); };
 $('#bSfx').onclick = () => { meta.prefs.sfx = !meta.prefs.sfx; setPrefs(meta.prefs.music, meta.prefs.sfx); saveMeta(); prefsLabels(); };
-$('#bSaveQuit').onclick = () => { saveRun(); leaveNet(); toMenu(); };
+$('#bSaveQuit').onclick = () => { if (game && game.tut) { endTutorial(false); return; } saveRun(); leaveNet(); toMenu(); };
 $('#bAbandon').onclick = () => {
   if (mode === 'guest') { leaveNet(); toMenu(); return; }
+  if (game && game.tut) { endTutorial(false); return; }
   const b = $('#bAbandon');
   if (!b.dataset.sure) { b.dataset.sure = '1'; b.innerHTML = '<i>v.</i> Click again to abandon (you keep your marrow)'; setTimeout(() => { delete b.dataset.sure; b.innerHTML = '<i>v.</i> Abandon the climb'; }, 3000); return; }
   delete b.dataset.sure;
@@ -386,7 +391,7 @@ $('#bJoin').onclick = () => {
   if (code.length !== 4) { $('#joinStatus').textContent = 'Codes are four letters.'; return; }
   $('#joinStatus').textContent = 'Joining…';
   net = new Net(onGuestMsg, (s, why) => {
-    if (s === 'open') { net.send({ t: 'hello', meta: { up: meta.up, weapon: meta.weapon, char: meta.char } }); $('#joinStatus').textContent = 'Joined. Waiting for the host to start.'; }
+    if (s === 'open') { net.send({ t: 'hello', meta: { up: meta.up, weapon: meta.weapon, char: meta.char, look: meta.look } }); $('#joinStatus').textContent = 'Joined. Waiting for the host to start.'; }
     if (s === 'closed') { if (mode === 'guest') { toast('<div class="ds">The host left the climb.</div>', 3000); toMenu(); } else $('#joinStatus').textContent = why || 'Could not join that room.'; }
   });
   net.join(code);
@@ -484,11 +489,79 @@ function pickCard(i) {
   cardKey = '__'; $('#lvl').classList.add('hidden');
 }
 
+// ---------- The Tailor: cosmetics for marrow
+meta.look = Object.assign({ skin: 'default', hat: 'none', trail: 'none' }, meta.look || {});
+meta.owned = meta.owned || [];
+const owns = (kind, id) => id === 'default' || id === 'none' || meta.owned.includes(kind + ':' + id);
+let tailTab = 'skins', tailRaf = 0;
+$('#bTailor').onclick = () => { show('tailor'); renderTailor('skins'); };
+document.querySelectorAll('#tailTabs button').forEach(b => b.onclick = () => renderTailor(b.dataset.t));
+function swatch(cols) { const c = document.createElement('canvas'); c.width = 8; c.height = 8; const g = c.getContext('2d'); [[1, 5], [3, 2], [5, 4], [6, 1], [2, 0]].forEach(([x, y], i) => { g.fillStyle = cols[i % cols.length]; g.fillRect(x, y, 2, 2); }); return c; }
+function renderTailor(tab) {
+  tailTab = tab;
+  $('#tailMarrow').textContent = meta.marrow;
+  document.querySelectorAll('#tailTabs button').forEach(b => b.classList.toggle('on', b.dataset.t === tab));
+  const ch = CHAR[meta.char] || CHAR.wren, kind = { skins: 'skin', hats: 'hat', trails: 'trail' }[tab], list = { skins: SKINS, hats: HATS, trails: TRAILS }[tab];
+  $('#tailWho').textContent = ch.name;
+  const grid = $('#tailGrid'); grid.innerHTML = '';
+  for (const it of list) {
+    const have = owns(kind, it.id), on = meta.look[kind] === it.id, poor = !have && meta.marrow < it.price;
+    const b = document.createElement('button'); b.className = 'titem' + (on ? ' on' : '') + (poor ? ' poor' : '');
+    let icon;
+    if (kind === 'skin') { icon = document.createElement('img'); icon.src = climberSprite(ch, it, 'a').c.toDataURL(); }
+    else if (kind === 'hat') { icon = document.createElement('img'); icon.src = it.id === 'none' ? climberSprite(ch, SKIN[meta.look.skin], 'a').c.toDataURL() : SPR['h_' + it.id].c.toDataURL(); }
+    else icon = it.cols.length ? swatch(it.cols) : swatch(['#5a4a40']);
+    b.appendChild(icon);
+    b.insertAdjacentHTML('beforeend', `<b>${it.name}</b><small>${on ? 'Wearing' : have ? 'Owned · click to wear' : `${it.price} marrow`}</small>`);
+    b.onclick = () => {
+      if (!have) { if (meta.marrow < it.price) { sfx('toast'); return; } meta.marrow -= it.price; meta.owned.push(kind + ':' + it.id); sfx('buy'); }
+      meta.look[kind] = it.id; saveMeta(); renderTailor(tab);
+    };
+    grid.appendChild(b);
+  }
+  cancelAnimationFrame(tailRaf);
+  const cv = $('#tailPrev'), g = cv.getContext('2d'); g.imageSmoothingEnabled = false;
+  const parts = [];
+  let last = performance.now();
+  const draw = now => {
+    if ($('#tailor').classList.contains('hidden')) return;
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    const t = now / 1000, f = Math.floor(t * 4) % 2 ? 'b' : 'a', s = climberSprite(ch, SKIN[meta.look.skin], f).c;
+    g.clearRect(0, 0, cv.width, cv.height);
+    const tr = TRAIL[meta.look.trail];
+    if (tr.cols.length && Math.random() < 0.5) parts.push({ x: 20 + (Math.random() - 0.5) * 8, y: 38, vx: (Math.random() - 0.5) * 8, vy: meta.look.trail === 'petals' ? 8 : -20, c: tr.cols[Math.random() < 0.5 ? 0 : 1], life: 0.9, size: meta.look.trail === 'hearts' || meta.look.trail === 'smoke' ? 2 : 1 });
+    for (const p of parts) { p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt; g.fillStyle = p.c; g.fillRect(Math.round(p.x), Math.round(p.y), p.size, p.size); }
+    for (let i = parts.length - 1; i >= 0; i--) if (parts[i].life <= 0) parts.splice(i, 1);
+    g.fillStyle = 'rgba(0,0,0,.35)'; g.fillRect(14, 39, 12, 2);
+    const bob = f === 'b' ? 1 : 0;
+    g.drawImage(s, 12, 24 - bob);
+    const hat = meta.look.hat !== 'none' && SPR['h_' + meta.look.hat];
+    if (hat) g.drawImage(hat.c, Math.round(20 - hat.w / 2), 24 - bob + 3 - hat.h - (meta.look.hat === 'halo' ? 3 - Math.round(Math.sin(t * 3)) : 0));
+    tailRaf = requestAnimationFrame(draw);
+  };
+  tailRaf = requestAnimationFrame(draw);
+}
+
+// ---------- tutorial: The Mouth
+function startTutorial() {
+  initAudio();
+  game = new Game({ coop: false, metas: [{ ...meta, up: {}, char: 'wren', weapon: 'salt' }], tutorial: true });
+  game.me = 0; mode = 'solo'; paused = false; endShown = false;
+  show(null); setMusic(0); card('0', 'The Mouth', 'Where every climb begins.');
+}
+function endTutorial(toArm) {
+  meta.tutorialDone = 1; saveMeta();
+  $('#tut').classList.add('hidden');
+  mode = 'menu'; game = null; paused = false; setMusic(-1);
+  if (toArm) { pendingEndless = false; openArm(); } else show('title');
+}
+$('#bTut').onclick = () => startTutorial();
+
 // ---------- prologue
 const INTRO = [[0, 'Long, long ago, something grew out of the earth.'], [3, 'It was alive.'], [6, 'And it was hungry.'], [9, 'People climbed in after what it took. None of them came back down.'], [12, 'Now it is your turn to climb.'], [14.2, '']];
 let introT = 0, introLineIdx = -1;
 function startIntro() { initAudio(); mode = 'intro'; introT = 0; introLineIdx = -1; R.parts = []; show(null); $('#intro').classList.remove('hidden'); setMusic(-1); }
-function endIntro() { if (mode !== 'intro') return; mode = 'menu'; $('#intro').classList.add('hidden'); meta.seenIntro = 1; saveMeta(); R.parts = []; show('title'); }
+function endIntro() { if (mode !== 'intro') return; mode = 'menu'; $('#intro').classList.add('hidden'); meta.seenIntro = 1; saveMeta(); R.parts = []; if (!meta.tutorialDone) startTutorial(); else show('title'); }
 $('#intro').addEventListener('click', endIntro);
 $('#bIntro').onclick = () => startIntro();
 function tickIntro(dt) {

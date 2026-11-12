@@ -28,7 +28,9 @@
         <button id="bInf"><i>ii.</i> Infinite climb <small>beyond the heart</small></button>
         <button id="bCoop"><i>iii.</i> Climb with a friend</button>
         <button id="bCamp"><i>iv.</i> Basecamp</button>
+        <button id="bTailor"><i>v.</i> The Tailor <small>looks for marrow</small></button>
         <button id="bIndex"><i>v.</i> Index</button>
+        <button id="bTut"><i>v.</i> Tutorial</button>
         <button id="bHelp"><i>v.</i> Field notes</button>
         <button id="bIntro"><i>vi.</i> Prologue</button>
         <button id="bLog"><i>vi.</i> Update log</button>
@@ -54,6 +56,20 @@
         <button data-tab="cards" role="tab"></button><button data-tab="actives" role="tab"></button><button data-tab="monsters" role="tab"></button><button data-tab="weapons" role="tab"></button><button data-tab="climbers" role="tab"></button><button data-tab="notes" role="tab"></button>
       </div>
       <div class="ixwrap"><div id="ixGrid" class="ixgrid"></div><aside id="ixDetail" class="ixdetail"></aside></div>
+      <nav class="menu"><button data-back><i>&larr;</i> Back</button></nav>
+    </section>
+
+    <section id="tailor" class="screen plate wide hidden">
+      <div class="plate-head"><span>Plate 0e</span><span>The Tailor, Cousin of Mr. Tapewell</span></div>
+      <h2>The Tailor</h2>
+      <p class="sub">"Marrow for a new look, climber. Looks change nothing. That is what makes them priceless." You have <b id="tailMarrow">0</b> marrow.</p>
+      <div class="tailwrap">
+        <div class="tailprev"><canvas id="tailPrev" width="40" height="44"></canvas><span id="tailWho"></span></div>
+        <div>
+          <div class="tabs" id="tailTabs"><button data-t="skins">Skins</button><button data-t="hats">Hats</button><button data-t="trails">Trails</button></div>
+          <div id="tailGrid" class="tailgrid"></div>
+        </div>
+      </div>
       <nav class="menu"><button data-back><i>&larr;</i> Back</button></nav>
     </section>
 
@@ -163,6 +179,7 @@
       <nav class="menu"><button id="bEndingGo"><i>&rarr;</i> Continue</button></nav>
     </section>
     <div id="intro" class="hidden"><p id="introLine"></p><span class="skip">Press any key to skip</span></div>
+    <div id="tut" class="hidden"><div class="fig" id="tutStep"></div><div class="nm" id="tutTitle"></div><div class="ds" id="tutText"></div></div>
     <div id="toast" class="hidden"></div>
     <div id="card" class="hidden"></div>
   </div>

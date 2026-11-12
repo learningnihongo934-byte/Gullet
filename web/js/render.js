@@ -1,7 +1,7 @@
 // Gullet renderer. Draws a "view" (the host's Game, or the guest's mirror of it) at 320x196 pixels.
 import { TILE, RW, RH, OX, OY, W, H, CX, CY, FLOORS, FL, BOSSES, ITEM, DOORS } from './data.js';
-import { SPR, floorArt, bosses, text, whiteOf, blob } from './sprites.js';
-import { ACTIVE } from './data.js';
+import { SPR, floorArt, bosses, text, whiteOf, blob, climberSprite } from './sprites.js';
+import { ACTIVE, CHAR, SKIN, TRAIL } from './data.js';
 import { mulberry32 } from './gen.js';
 
 const mk = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
@@ -381,8 +381,9 @@ export class Renderer {
     for (const q of g) { q.life -= 1 / 60; }
     while (g.length && g[0].life <= 0) g.shift();
     const frame = p.moving ? Math.floor(p.anim) % 2 : 0;
-    const name = 'c_' + (SPR['c_' + p.char + '_a'] ? p.char : 'wren') + '_' + (p.face === 'u' ? (frame ? 'v' : 'u') : (frame ? 'b' : 'a'));
-    const s = SPR[name];
+    const look = p.look || {}, s = climberSprite(CHAR[p.char] || CHAR.wren, SKIN[look.skin], p.face === 'u' ? (frame ? 'v' : 'u') : (frame ? 'b' : 'a'));
+    const tr = TRAIL[look.trail];
+    if (tr && tr.cols.length && p.moving && !p.down && Math.random() < 0.45) { const up = look.trail !== 'petals'; this.parts.push({ x: p.x + rr(-3, 3), y: p.y + rr(0, 3), vx: rr(-8, 8), vy: up ? rr(-26, -10) : rr(4, 12), c: tr.cols[Math.random() < 0.5 ? 0 : 1], life: 0.6, max: 0.6, size: look.trail === 'hearts' || look.trail === 'smoke' ? 2 : 1 }); }
     for (const q of g) { x.globalAlpha = q.life * 2.5; x.drawImage(this.white(s.c), Math.round(q.x - 8), Math.round(q.y - 13)); }
     x.globalAlpha = 1;
     if (p.down) {
@@ -400,6 +401,8 @@ export class Renderer {
       const sc = p.char === 'pip' ? 0.8 : 1, sw = Math.round(16 * sc), ox = Math.round((16 - sw) / 2), oy = 16 - sw;
       if (p.face === 'l') { x.save(); x.scale(-1, 1); x.drawImage(s.c, -px - 16 + ox, py + oy, sw, sw); x.restore(); } else x.drawImage(s.c, px + ox, py + oy, sw, sw);
       x.globalAlpha = 1;
+      const hat = look.hat && look.hat !== 'none' && SPR['h_' + look.hat];
+      if (hat) { const hy = py + oy + 3 - hat.h - (look.hat === 'halo' ? 3 - Math.round(Math.sin(t * 3)) : 0); x.drawImage(hat.c, Math.round(p.x - hat.w / 2 + F[0] * rc), Math.round(hy)); }
       if (p.frenzy > 0 && Math.floor(t * 12) % 2) { x.fillStyle = '#f6ecd9'; x.fillRect(Math.round(p.x - 6), Math.round(p.y - 16), 1, 1); x.fillRect(Math.round(p.x + 6), Math.round(p.y - 14), 1, 1); }
     }
     if (p.shieldUp) { x.fillStyle = '#9ad8dc'; for (let a = 0; a < 12; a++) { const ang = a / 12 * Math.PI * 2 + t; x.fillRect(Math.round(p.x + Math.cos(ang) * 10), Math.round(p.y - 5 + Math.sin(ang) * 10), 1, 1); } }

@@ -375,3 +375,39 @@ export const ENDINGS = {
   heart: ['The heart gives one last beat and goes still.', 'For a long moment the whole tower holds its breath. Then, far above, something keeps moving.', 'The heart was never what kept it alive.', 'You can stop here. Or you can climb on, past the heart, in an Infinite climb.'],
   mind: ['The Mind folds in on itself and the voices go quiet, one by one.', 'In the silence you hear it, deep below: the mouth, opening again.', 'The tower is starting over. It always starts over.', 'Keep climbing.'],
 };
+
+// ---- The Tailor: cosmetics bought with marrow. Looks only, no stats.
+export const SKINS = [
+  { id: 'default', name: 'As You Came', price: 0, swap: {} },
+  { id: 'crimson', name: 'Crimson', price: 60, swap: { r: 'R', R: 'k', g: 'K', G: 'k' } },
+  { id: 'moss', name: 'Moss', price: 60, swap: { r: 'g', R: 'G', g: 'n', G: 'N' } },
+  { id: 'bone', name: 'Bone', price: 80, swap: { r: 'w', R: 'W', g: 'W', G: 'S' } },
+  { id: 'bruise', name: 'Bruise', price: 80, swap: { r: 'm', R: 'M', g: 'M', G: 'B' } },
+  { id: 'bile', name: 'Bile', price: 90, swap: { r: 'y', R: 'Y', g: 'g', G: 'G' } },
+  { id: 'midnight', name: 'Midnight', price: 100, swap: { r: 'b', R: 'B', g: 'B', G: 'K' } },
+  { id: 'ember', name: 'Ember', price: 120, swap: { r: 'o', R: 'r', g: 'R', G: 'k' } },
+  { id: 'gold', name: 'Gilded', price: 250, swap: { r: 'y', R: 'o', g: 'y', G: 'Y' } },
+];
+export const HATS = [
+  { id: 'none', name: 'Bare Head', price: 0 },
+  { id: 'beanie', name: 'Beanie', price: 40 },
+  { id: 'party', name: 'Party Hat', price: 50 },
+  { id: 'fez', name: 'Fez', price: 80 },
+  { id: 'tophat', name: 'Top Hat', price: 70 },
+  { id: 'chef', name: 'Chef Hat', price: 90 },
+  { id: 'antlers', name: 'Antlers', price: 120 },
+  { id: 'halo', name: 'Halo', price: 150 },
+  { id: 'crown', name: 'Crown', price: 200 },
+];
+export const TRAILS = [
+  { id: 'none', name: 'No Trail', price: 0, cols: [] },
+  { id: 'smoke', name: 'Smoke', price: 60, cols: ['#6a5a5e', '#8a7a7e'] },
+  { id: 'bubbles', name: 'Bile Bubbles', price: 70, cols: ['#bcd04a', '#f0f4a0'] },
+  { id: 'embers', name: 'Embers', price: 80, cols: ['#e8873a', '#f2d15c'] },
+  { id: 'petals', name: 'Petals', price: 90, cols: ['#e58494', '#c02a3e'] },
+  { id: 'sparkles', name: 'Sparkles', price: 100, cols: ['#ffffff', '#9ad8dc'] },
+  { id: 'hearts', name: 'Hearts', price: 120, cols: ['#e58494', '#ff3a5a'] },
+];
+export const SKIN = Object.fromEntries(SKINS.map(x => [x.id, x]));
+export const HAT = Object.fromEntries(HATS.map(x => [x.id, x]));
+export const TRAIL = Object.fromEntries(TRAILS.map(x => [x.id, x]));

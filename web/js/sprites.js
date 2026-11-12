@@ -301,6 +301,16 @@ const ACTIVE_ART = {
 const BOMB = ['......kyk...', '.....k.y....', '....k.......', '..kkkkk.....', '.kKKKKKk....', 'kKKwKKKKk...', 'kKwKKKKKk...', 'kKKKKKKKk...', 'kKKKKKKKk...', '.kKKKKKk....', '..kkkkk.....'];
 const NOTE = ['.kkkkkkkk...', '.kwwwwwwWk..', '.kwkkkwwwWk.', '.kwwwwwwwwk.', '.kwkkkkkwwk.', '.kwwwwwwwwk.', '.kwkkkkwwwk.', '.kwwwwwwwwk.', '.kWWWWWWWWk.', '.kkkkkkkkkk.'];
 const TAPEWELL = ['....kkkkkk......', '....kKKKKk......', '....kKKKKk......', '...kkkkkkkk.....', '....kwwwwk......', '...kwkwwkwk.....', '...kwwwwwwk.....', '...kwrrrrwk.....', '....kwwwwk......', '...kwwwwwwk.....', '..kwwkwwkwwk....', '..kwwwwwwwwk....', '...kwwwwwwk.....', '....kwwwwwk.....', '.....kwwwwwk....', '......kwwwwwk...', '.......kkkwwk...', '..........kk....'];
+const HAT_ART = {
+  beanie: ['..kkk..', '.kbbbk.', 'kbbbbbk', 'kBkBkBk'],
+  party: ['...k...', '..kmk..', '..kyk..', '.kmmmk.', '.kyyyk.', 'kmmmmmk'],
+  fez: ['....kk.', '.kkkky.', '.krrrk.', '.krrrk.', 'kkkkkk.'],
+  tophat: ['.kkkkk.', '.kKKKk.', '.kKKKk.', '.krrrk.', 'kkkkkkk'],
+  chef: ['.kkkkk.', 'kwwwwwk', 'kwwwwwk', '.kwwwk.', '.kWWWk.'],
+  antlers: ['k.....k', 'nk...kn', '.nk.kn.', '..nkn..'],
+  halo: ['.kkkkk.', 'ky...yk', '.kkkkk.'],
+  crown: ['k.k.k.k', 'kykykyk', 'kyyryyk', 'kkkkkkk'],
+};
 const CROWN = ['k.k.k.k', 'kykykyk', 'kyyryyk', 'kkkkkkk'];
 const CACHE = ['....kk....', '...kyyk...', '..kkkkkk..', '.knnnnnnk.', 'knnnynnnnk', 'kyyyyyyyyk', 'knnnynnnnk', 'knnnynnnnk', '.kNNyNNNk.', '..kkkkkk..'];
 const MARROW = ['.kk...kk.', 'kyokkkoyk', '.koooook.', 'kyokkkoyk', '.kk...kk.'];
@@ -312,6 +322,12 @@ function lumpArt(pal) {
   return blob(16, 16, (x, y) => Math.hypot((x - 8) / 7.2, (y - 8.6) / 6.6) < 1 + Math.sin(Math.atan2(y - 8, x - 8) * 5) * 0.06, pal);
 }
 
+/** A climber in a given skin, built the first time it is needed. f = a | b | u | v. */
+export function climberSprite(c, skin, f) {
+  const key = 'c_' + c.id + '_' + (skin ? skin.id : 'default') + '_' + f;
+  if (!SPR[key]) { const face = f === 'u' || f === 'v' ? BACK : FACE, legs = f === 'b' || f === 'v' ? LEGS_B : LEGS_A; add(key, paint(climber(face, legs), 16, 16, { ...c.swap, ...(skin ? skin.swap : {}) })); }
+  return SPR[key];
+}
 export function buildChars(CHARS) {
   for (const c of CHARS) {
     add('c_' + c.id + '_a', paint(climber(FACE, LEGS_A), 16, 16, c.swap)); add('c_' + c.id + '_b', paint(climber(FACE, LEGS_B), 16, 16, c.swap));
@@ -327,6 +343,7 @@ export function buildSprites() {
   for (const k in ART) add(k, paint(ART[k], 16, 16));
   for (const k in ITEM_ART) add('i_' + k, paint(ITEM_ART[k], 12, 12));
   for (const k in WEAPON_ART) add('w_' + k, paint(WEAPON_ART[k], 12, 12));
+  for (const k in HAT_ART) { const r = HAT_ART[k]; add('h_' + k, paint(r, Math.max(...r.map(x => x.length)), r.length)); }
   add('heart', paint(HEART, 7, 6)); add('heartE', paint(HEART_E, 7, 6));
   add('tooth', paint(TOOTH, 7, 7)); add('cache', paint(CACHE, 10, 10));
   for (const k in ACTIVE_ART) add('a_' + k, paint(ACTIVE_ART[k], 12, 12));
