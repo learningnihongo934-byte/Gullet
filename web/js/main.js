@@ -35,9 +35,9 @@ const arcadeScore = (score, m) => { try { if (window.parent !== window) window.p
 // ---------- layout
 function fit() {
   const iw = innerWidth, ih = innerHeight;
-  let s = Math.floor(Math.min(iw / W, ih / H));
-  if (s < 1) s = Math.min(iw / W, ih / H);
-  stage.style.width = W * s + 'px'; stage.style.height = H * s + 'px';
+  // fill the window as far as the game's shape allows (pixels stay sharp with image-rendering: pixelated)
+  const s = Math.min(iw / W, ih / H);
+  stage.style.width = Math.floor(W * s) + 'px'; stage.style.height = Math.floor(H * s) + 'px';
   document.documentElement.style.setProperty('--s', Math.max(1.6, s));
 }
 addEventListener('resize', fit); fit();
