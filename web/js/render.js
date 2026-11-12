@@ -1,6 +1,6 @@
 // Gullet renderer. Draws a "view" (the host's Game, or the guest's mirror of it) at 320x196 pixels.
 import { TILE, RW, RH, OX, OY, W, H, CX, CY, FLOORS, FL, BOSSES, ITEM, DOORS } from './data.js';
-import { SPR, floorArt, bosses, text, whiteOf, blob, climberSprite } from './sprites.js';
+import { SPR, floorArt, bosses, text, whiteOf, blob, climberSprite, climberUpper, legColors } from './sprites.js';
 import { ACTIVE, CHAR, SKIN, TRAIL } from './data.js';
 import { mulberry32 } from './gen.js';
 
@@ -312,6 +312,31 @@ export class Renderer {
     x.fillStyle = '#efe4cc'; x.fillRect(bx + bw, by + 5, 4, 2); x.fillStyle = '#1b0d12'; x.fillRect(bx + bw + 4, by + 4, 1, 1); x.fillRect(bx + bw + 4, by + 7, 1, 1);
     lines.forEach((l, i) => text(x, l, bx + 3, by + 3 + i * 7, '#5a1a1a', null));
   }
+  /** One frame of a climber: the upper body over legs that stride with p.anim. */
+  composeClimber(p, ch, sk) {
+    const c = this.pcan || (this.pcan = mk(16, 16)), g = c.getContext('2d');
+    g.clearRect(0, 0, 16, 16);
+    const view = p.face === 'u' ? 'u' : p.face === 'd' ? 'd' : 's', col = legColors(ch, sk);
+    const ph = (p.anim || 0) * 1.25, mv = p.moving && !p.down, sn = mv ? Math.sin(ph) : 0, cs = mv ? Math.cos(ph) : 0;
+    const leg = (lx, top, len, boot) => { g.fillStyle = col.line; g.fillRect(lx - 1, top, 4, len + 1); g.fillStyle = col.pants; g.fillRect(lx, top, 2, 1); g.fillStyle = boot; g.fillRect(lx, top + 1, 2, len - 1); };
+    if (view === 's') {
+      // side: one leg swings forward while the other pushes back; the swinging foot clears the ground
+      const sw = Math.round(sn * 3), liftA = cs > 0.35 ? 1 : 0, liftB = cs < -0.35 ? 1 : 0;
+      leg(6 - sw, 12, 3 - liftB, col.far);
+      leg(7 + sw, 12, 3 - liftA, col.boot);
+    } else {
+      // front and back: feet take turns lifting, hips sway a pixel
+      const liftL = Math.round(Math.max(0, sn) * 2), liftR = Math.round(Math.max(0, -sn) * 2), sway = mv ? Math.round(sn * 0.6) : 0;
+      leg(5 + sway, 12, 3 - liftL, col.boot);
+      leg(9 + sway, 12, 3 - liftR, col.boot);
+    }
+    // a slight lean into the run; the body stays level so it reads as running, not hopping
+    g.drawImage(climberUpper(ch, sk, view).c, view === 's' && mv ? 1 : 0, 0);
+    // dust on each footfall
+    const step = Math.floor(ph / Math.PI);
+    if (mv && step !== p._step) { p._step = step; if (!p.dashT) for (let i = 0; i < 2; i++) this.parts.push({ x: p.x + (Math.random() - 0.5) * 6, y: p.y + 3, vx: (Math.random() - 0.5) * 14, vy: -Math.random() * 8, c: 'rgba(200,170,160,0.55)', life: 0.3, max: 0.3, size: 1 }); }
+    return c;
+  }
   drawCache(cx, cy) {
     const x = this.x, t = this.t;
     x.fillStyle = (t * 6) % 2 < 1 ? '#f2d15c' : '#e8873a';
@@ -380,15 +405,15 @@ export class Renderer {
     if (p.dashT > 0 && (g.length === 0 || Math.hypot(g[g.length - 1].x - p.x, g[g.length - 1].y - p.y) > 4)) g.push({ x: p.x, y: p.y, life: 0.2 });
     for (const q of g) { q.life -= 1 / 60; }
     while (g.length && g[0].life <= 0) g.shift();
-    const frame = p.moving ? Math.floor(p.anim) % 2 : 0;
-    const look = p.look || {}, s = climberSprite(CHAR[p.char] || CHAR.wren, SKIN[look.skin], p.face === 'u' ? (frame ? 'v' : 'u') : (frame ? 'b' : 'a'));
+    const frame = 0;
+    const look = p.look || {}, ch = CHAR[p.char] || CHAR.wren, sk = SKIN[look.skin], s = { c: this.composeClimber(p, ch, sk) }, still = climberSprite(ch, sk, p.face === 'u' ? 'u' : 'a');
     const tr = TRAIL[look.trail];
     if (tr && tr.cols.length && p.moving && !p.down && Math.random() < 0.45) { const up = look.trail !== 'petals'; this.parts.push({ x: p.x + rr(-3, 3), y: p.y + rr(0, 3), vx: rr(-8, 8), vy: up ? rr(-26, -10) : rr(4, 12), c: tr.cols[Math.random() < 0.5 ? 0 : 1], life: 0.6, max: 0.6, size: look.trail === 'hearts' || look.trail === 'smoke' ? 2 : 1 }); }
-    for (const q of g) { x.globalAlpha = q.life * 2.5; x.drawImage(this.white(s.c), Math.round(q.x - 8), Math.round(q.y - 13)); }
+    for (const q of g) { x.globalAlpha = q.life * 2.5; x.drawImage(this.white(still.c), Math.round(q.x - 8), Math.round(q.y - 13)); }
     x.globalAlpha = 1;
     if (p.down) {
       x.globalAlpha = 0.45 + Math.sin(t * 4) * 0.1;
-      x.drawImage(this.white(s.c), Math.round(p.x - 8), Math.round(p.y - 15 + Math.sin(t * 3) * 2));
+      x.drawImage(this.white(still.c), Math.round(p.x - 8), Math.round(p.y - 15 + Math.sin(t * 3) * 2));
       x.globalAlpha = 1;
       text(x, 'CLEAR THE ROOM', p.x, p.y - 24, '#f6ecd9', '#1b0d12', 'center');
       return;

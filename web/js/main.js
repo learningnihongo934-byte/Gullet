@@ -652,6 +652,6 @@ requestAnimationFrame(frame);
 
 // test hook for automated checks
 window.GULLET = {
-  get game() { return game; }, get mirror() { return mirror; }, startSolo, meta, keys,
+  get game() { return game; }, get mirror() { return mirror; }, startSolo, meta, keys, R,
   step(n = 60, inp = {}) { for (let i = 0; i < n && game.state === 'play'; i++) { game.update(STEP, [inp, {}]); const evs = game.events; game.events = []; handleEvents(game, evs); } R.draw(game, 1 / 60); },
 };

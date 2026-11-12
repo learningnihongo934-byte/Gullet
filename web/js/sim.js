@@ -257,7 +257,7 @@ export class Game {
     vx += p.px; vy += p.py;
     const decay = Math.pow(0.02, dt); p.px *= decay; p.py *= decay;
     this.move(p, vx * dt, vy * dt, 'p');
-    p.moving = l > 0.1; if (p.moving) p.anim += dt * 9;
+    p.moving = l > 0.1; if (p.moving) p.anim += dt * Math.min(18, Math.hypot(vx, vy) / 8.5);
     let ax = inp.ax || 0, ay = inp.ay || 0;
     const al = Math.hypot(ax, ay);
     if (al > 0.1) {

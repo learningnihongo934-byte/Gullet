@@ -323,6 +323,22 @@ function lumpArt(pal) {
 }
 
 /** A climber in a given skin, built the first time it is needed. f = a | b | u | v. */
+// Walking is drawn in two parts: the upper body (sprites below) and legs placed each frame by the renderer.
+const SIDE = ['................', '.....kkkkkk.....', '....knnnnnnk....', '...knnnnnnnnk...', '...knnnnnhhhk...', '...knnnnhhkhk...', '...knnnnhhhhk...', '....knnkhhHk....', '....krrrrrrk....', '...kRrrrrrrrk...', '...kRkgggghk....', '....kgGGGgk.....'];
+/** Upper body (16x12) for view d (front), u (back) or s (side, facing right). */
+export function climberUpper(c, skin, view) {
+  const key = 'cu_' + c.id + '_' + (skin ? skin.id : 'default') + '_' + view;
+  if (!SPR[key]) {
+    const rows = view === 's' ? SIDE : climber(view === 'u' ? BACK : FACE, LEGS_A).slice(0, 12);
+    add(key, paint(rows, 16, 12, { ...c.swap, ...(skin ? skin.swap : {}) }));
+  }
+  return SPR[key];
+}
+/** Colours for the drawn legs: trousers (tunic shade), boot, and a darker far-leg boot. */
+export function legColors(c, skin) {
+  const sw = { ...c.swap, ...(skin ? skin.swap : {}) }, col = ch => PAL[sw[ch] || ch] || PAL[ch];
+  return { pants: col('G'), boot: col('N'), far: col('K'), line: PAL.k };
+}
 export function climberSprite(c, skin, f) {
   const key = 'c_' + c.id + '_' + (skin ? skin.id : 'default') + '_' + f;
   if (!SPR[key]) { const face = f === 'u' || f === 'v' ? BACK : FACE, legs = f === 'b' || f === 'v' ? LEGS_B : LEGS_A; add(key, paint(climber(face, legs), 16, 16, { ...c.swap, ...(skin ? skin.swap : {}) })); }
