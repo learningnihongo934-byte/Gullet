@@ -212,10 +212,16 @@ export class Game {
     if (p.down) { // a downed climber drifts as a ghost until the room is cleared
       p.x = clamp(p.x + mx * 45 * dt, L + 4, Rx - 4); p.y = clamp(p.y + my * 45 * dt, T + 4, By - 4); p.moving = l > 0.1; return;
     }
-    if (inp.dash && p.dashCd <= 0 && l > 0.1) { p.dashT = 0.17; p.dashCd = st.dashCD; p.dx = mx; p.dy = my; this.ev({ k: 'dash', p: p.id }); }
+    if (inp.dash && p.dashCd <= 0) {
+      // dash the way you're moving, or the way you're facing when standing still
+      let dx = mx, dy = my;
+      if (l <= 0.1) { const F = { u: [0, -1], d: [0, 1], l: [-1, 0], r: [1, 0] }[p.face] || [0, 1]; dx = F[0]; dy = F[1]; }
+      p.dashT = 0.17; p.dashCd = st.dashCD; p.dx = dx; p.dy = dy; this.ev({ k: 'dash', p: p.id });
+    }
     let vx, vy;
     if (p.dashT > 0) {
       p.dashT -= dt; vx = p.dx * 235; vy = p.dy * 235;
+      if (p.dashT <= 0) p.inv = Math.max(p.inv, 0.15); // short grace so you can't get clipped coming out of a dash
       if (st.candle) { p.trailT -= dt; if (p.trailT <= 0) { p.trailT = 0.03; this.hazards.push({ k: 'fire', x: p.x, y: p.y + 2, r: 7, t: 0, life: 1.6, dmg: 6 * st.candle }); } }
     } else {
       p.vx += (mx * st.speed - p.vx) * Math.min(1, dt * 14); p.vy += (my * st.speed - p.vy) * Math.min(1, dt * 14);
@@ -630,6 +636,7 @@ export class Game {
       if (b.en) {
         for (const p of this.players) {
           if (!p.present || p.down) continue;
+          if (p.dashT > 0) continue; // dashing climbers pass straight through shots
           if (Math.hypot(p.x - b.x, p.y - 3 - b.y) < b.r + p.r - 1) { if (this.hurt(p, 1) || p.inv <= 0) b.life = 0; break; }
         }
       } else {
